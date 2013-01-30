@@ -131,7 +131,9 @@ var sync = (function() {
     list: function(dataset_id, success, failure) {
       self.getDataSet(dataset_id, function(dataset) {
         if (dataset) {
-          success(dataset.data);
+          // Return a copy of the dataset so updates will not automatically make it back into the dataset
+          var res = JSON.parse(JSON.stringify(dataset.data));
+          success(dataset.res);
         }
       }, function(code, msg) {
         failure(code, msg);
@@ -148,7 +150,9 @@ var sync = (function() {
         if (!rec) {
           failure("unknown_uid");
         } else {
-          success(rec);
+          // Return a copy of the record so updates will not automatically make it back into the dataset
+          var res = JSON.parse(JSON.stringify(rec));
+          success(res);
         }
       }, function(code, msg) {
         failure(code, msg);

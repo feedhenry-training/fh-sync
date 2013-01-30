@@ -1,7 +1,10 @@
 var datasetId = 'myShoppingList';
 var datasetHash;
+var table;
 
 $(document).ready(function() {
+
+  $('#updateBtn').attr('disabled', 'disabled');
   initSync();
 });
 
@@ -54,13 +57,18 @@ function handleListSuccess(res) {
   var tableData = [];
   // Iterate over the dataset to create a record structure which is suitable for the jQuery Data table
   // we are using to display the data (i.e a 2d array)
+
+  var controls = [];
+  controls.push('<button class="btn edit">Edit</button>&nbsp;');
+  controls.push('<button class="btn delete">Delete</button>&nbsp;');
+
   for( i in res ) {
     var row = [];
     var rec = res[i];
     row.push(i);
     row.push(rec.data.name);
     row.push(new Date(rec.data.created));
-
+    row.push(controls.join(""));
     tableData.push(row);
   }
   reloadTable(tableData);
@@ -91,23 +99,41 @@ function addItem() {
 }
 
 function updateItem() {
-  console.log('addItem Called...');
-  var name = $('#itemIn').val();
-  var created = new Date().getTime();
-  var dataItem = {
-    "name" : name,
-    "created" : created
-  };
-  sync.create(datasetId, dataItem, handleCreateSuccess, handleCreateFailure);
-  $('#itemIn').val('');
+  // Read the data from the fields
+  var name = $('#itemUp').val();
+  var uid = $('#itemUpId').val();
+
+  // Reset fields and disable update button
+  $('#itemUp').val('');
+  $('#itemUpId').val('');
+  $('#updateBtn').attr('disabled', 'disabled');
+
+  // Read the full record from the sync service
+  sync.read(datasetId, uid, function(res) {
+    var data = res.data;
+    // Update the name field with the updated value from the text box
+    data.name = name;
+
+    // Send the update to the sync service
+    sync.update(datasetId, uid, data, function(res) {
+      //Update completed successfully, nothing to do here
+    },
+    function(code, msg) {
+      alert('Unable to update row : (' + code + ') ' + msg);
+    });
+  }, function(code, msg) {
+    alert('Unable to read row for updating : (' + code + ') ' + msg);
+  });
+
+
 }
 
 function reloadTable(contents) {
   console.log('reloadTable :: ', contents);
   // Create a table to store the Sync Data
-  $('#table').html( '<table cellpadding="0" cellspacing="0" border="0" class="display" id="shoppingList"></table>' );
+  $('#table').html( '<table cellpadding="0" cellspacing="0" border="0" class="table table-striped table-bordered" id="shoppingList"></table>' );
 
-  $('#shoppingList').dataTable( {
+  table = $('#shoppingList').dataTable( {
     "bDestroy":true,
     "aaData": contents,
     "aoColumns": [
@@ -116,5 +142,47 @@ function reloadTable(contents) {
       { "sTitle": "Date Created" },
       { "sTitle": "Controls", "bSortable": false, "sClass": "controls" }
     ]
+  });
+
+  $('tr td .edit, tr td .delete, tr td:not(.controls,.dataTables_empty)').unbind().click(function() {
+    var row = $(this).parent().parent();
+    var data = table.fnGetData($(this).closest('tr').get(0));
+
+    if($(this).hasClass('edit')) {
+      doEditRow(data);
+    }
+    else if( $(this).hasClass('delete')) {
+      doDeleteRow(data);
+    }
+    return false;
+  });
+}
+
+function doEditRow(row) {
+  sync.read(datasetId, row[0], function(res) {
+    console.log('read ', res);
+    $('#itemUp').val(res.data.name);
+    $('#itemUpId').val(row[0]);
+    $('#updateBtn').removeAttr('disabled');
+  },
+  function(code, msg) {
+    alert('Unable to read row for editing : (' + code + ') ' + msg);
+  });
+}
+
+function doDeleteRow(row) {
+  sync.read(datasetId, row[0], function(res) {
+    var doDelete = confirm('Are you sure you wish to delete this row')
+    if( doDelete ) {
+      sync.delete(datasetId, row[0], function(res) {
+        // Successfully deleted - no need to do anything
+      },
+      function(code, msg) {
+        alert('Unable to delete row : (' + code + ') ' + msg);
+      });
+    }
+  },
+  function(code, msg) {
+    alert('Unable to read row for deleting : (' + code + ') ' + msg);
   });
 }
