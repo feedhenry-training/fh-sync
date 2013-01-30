@@ -1,1 +1,4 @@
 .idea
+.fhclocal
+fhc-debug.log
+node_modules/

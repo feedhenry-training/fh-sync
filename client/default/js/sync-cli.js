@@ -6,11 +6,13 @@ var sync = (function() {
     defaults: {
       "sync_frequency": 10,
       // How often to synchronise data with the cloud in seconds.
+      "auto_sync_local_updates": true,
+      // Should local chages be syned to the cloud immediately, or should they wait for the next sync interval
       "notify_client_storage_failed": false,
       // Should a notification event be triggered when loading/saving to client storage fails
       "notify_sync_started": false,
       // Should a notification event be triggered when a sync cycle with the server has been started
-      "notify_sync_complete": false,
+      "notify_sync_complete": true,
       // Should a notification event be triggered when a sync cycle with the server has been completed
       "notify_offline_update": false,
       // Should a notification event be triggered when an attempt was made to update a record while offline
@@ -267,6 +269,13 @@ var sync = (function() {
 
           self.saveDataSet(dataset_id);
           self.doNotify(dataset_id, uid, self.notifications.LOCAL_UPDATE_APPLIED, action);
+          if(self.config.auto_sync_local_updates) {
+            if( dataset.timeoutInterval ) {
+              console.log('auto_sync_local_updates - clearing timeout for dataset sync loop');
+              clearTimeout(dataset.timeoutInterval);
+              self.syncLoop(dataset_id);
+            }
+          }
           success(obj);
         }, function(code, msg) {
           failure(code, msg);
@@ -435,7 +444,7 @@ var sync = (function() {
         dataset.timeoutInterval = setTimeout(function() {
           self.syncLoop(dataset_id);
         }, dataset.config.sync_frequency * 1000);
-        self.doNotify(dataset_id, null, self.notifications.SYNC_COMPLETE, status);
+        self.doNotify(dataset_id, dataset.hash, self.notifications.SYNC_COMPLETE, status);
 
       });
     },
