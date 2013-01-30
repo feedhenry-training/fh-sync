@@ -133,7 +133,7 @@ var sync = (function() {
         if (dataset) {
           // Return a copy of the dataset so updates will not automatically make it back into the dataset
           var res = JSON.parse(JSON.stringify(dataset.data));
-          success(dataset.res);
+          success(res);
         }
       }, function(code, msg) {
         failure(code, msg);

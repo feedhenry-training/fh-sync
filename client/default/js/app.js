@@ -30,19 +30,14 @@ function initSync() {
   sync.manage(datasetId, {});
 
   // Request the initial dataset from the sync service
-  sync.list(datasetId, handleListSuccess, handleListFailure);
-
-  //sync.create(datasetId, JSON.parse(document.getElementById('data').value), handleSuccess, handleFailure);" value="Create"/>
-  //sync.read(datasetId, document.getElementById('uid').value, handleSuccess, handleFailure);" value="Read"/>
-  //sync.update(datasetId, document.getElementById('uid').value, JSON.parse(document.getElementById('data').value), handleSuccess, handleFailure);" value="Update"/>
-  //sync.delete(datasetId, document.getElementById('uid').value, handleSuccess, handleFailure);" value="Delete"/>
-
+  //sync.list(datasetId, handleListSuccess, handleListFailure);
 }
 
 function handleSyncNotifications(notification) {
   console.log('############ handleSyncNotifications :: notification = ', notification);
   if( 'sync_complete' == notification.code ) {
     // We are interetsed in sync_complete notifications as there may be changes to the dataset
+    console.log('datasetHash = ' + datasetHash);
     if( datasetHash != notification.uid ) {
       // The dataset hash received in the uid parameter is different to the one we have stored.
       // This means that there has been a change in the dataset, so we should invoke the list operation.
@@ -53,7 +48,7 @@ function handleSyncNotifications(notification) {
 }
 
 function handleListSuccess(res) {
-  console.log('handleListSuccess :: ', arguments);
+  console.log('handleListSuccess :: ', res);
   var tableData = [];
   // Iterate over the dataset to create a record structure which is suitable for the jQuery Data table
   // we are using to display the data (i.e a 2d array)
