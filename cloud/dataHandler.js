@@ -77,13 +77,13 @@ exports.doDelete = function(dataset_id, uid, cb) {
   });
 };
 
-exports.doCollision = function(dataset_id, hash, uid, pre, post) {
-  console.log("doCollision : ", dataset_id, " :: hash= ", hash, " :: uid= ", uid, " :: pre= ", pre, " :: post= ", post);
-  collisions[hash] = {"uid":uid, "pre":pre, "post":post};
+exports.doCollision = function(dataset_id, hash, timestamp, uid, pre, post) {
+  console.log("doCollision : ", dataset_id, " :: hash= ", hash, " :: timestamp= ", timestamp, " :: uid= ", uid, " :: pre= ", pre, " :: post= ", post);
+  collisions[hash] = {"uid":uid, "pre":pre, "post":post, "timestamp": timestamp};
 };
 
-exports.getCollision = function(dataset_id) {
-  return collisions;
+exports.listCollisions = function(dataset_id, cb) {
+  return cb(null, collisions);
 };
 
 exports.removeCollision = function(dataset_id, hash, cb) {

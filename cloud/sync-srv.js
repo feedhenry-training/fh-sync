@@ -63,6 +63,7 @@ exports.handleCollision = function(dataset_id, fn) {
 };
 
 exports.listCollisions = function(dataset_id, fn) {
+  console.log('!!!!!!!!!!!!!!!listCollisions - ', fn);
   getDataset(dataset_id, function(err, dataset) {
     if( ! err ) {
       dataset.collisionLister = fn;

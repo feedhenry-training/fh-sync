@@ -185,3 +185,12 @@ function doDeleteRow(row) {
     alert('Unable to read row for deleting : (' + code + ') ' + msg);
   });
 }
+
+function setOnline() {
+  var isOnline = $('#isOnlineChk').is(":checked")
+  console.log('isOnline = ' + isOnline);
+  //navigator.network.connection.type
+  navigator.network = navigator.network || {};
+  navigator.network.connection = navigator.network.connection || {}
+  navigator.network.connection.type = isOnline ? 'WiFi' : 'none';
+}
