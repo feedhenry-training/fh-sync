@@ -1,6 +1,7 @@
   <link href="css/bootstrap.min.css" rel="stylesheet" media="screen">
   <link href="css/jquery.dataTables.css" rel="stylesheet" media="screen">
   <link href="css/app.css" rel="stylesheet" media="screen">
+
   <h3>Data Sync Tutorial</h3>
   <h4>Shopping List Example</h4>
 
@@ -22,6 +23,9 @@
     <input type="button" value="Add" cls="btn" onclick="addItem()" />
   </div>
 
+
+  <textarea id='notifications' rows=10></textarea>
+  <input type="button" value="Clear" cls="btn" onclick="clearNotifications()" />
 
   <script src="js/sha1.js"></script>
   <script src="js/sync-cli.js"></script>

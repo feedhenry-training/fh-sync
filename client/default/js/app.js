@@ -13,14 +13,14 @@ function initSync() {
   sync.init({
     "sync_frequency": 5,
     "auto_sync_local_updates": true,
-    "notify_client_storage_failed": false,
-    "notify_sync_started": false,
+    "notify_client_storage_failed": true,
+    "notify_sync_started": true,
     "notify_sync_complete": true,
-    "notify_offline_update": false,
+    "notify_offline_update": true,
     "notify_collision_detected": true,
-    "notify_update_failed": false,
-    "notify_update_applied": false,
-    "notify_delta_received": false
+    "notify_update_failed": true,
+    "notify_update_applied": true,
+    "notify_delta_received": true
   });
 
   // Provide handler function for receiving notifications from sync service - e.g. data changed
@@ -30,14 +30,15 @@ function initSync() {
   sync.manage(datasetId, {});
 
   // Request the initial dataset from the sync service
-  //sync.list(datasetId, handleListSuccess, handleListFailure);
+  sync.list(datasetId, handleListSuccess, handleListFailure);
 }
 
 function handleSyncNotifications(notification) {
-  console.log('############ handleSyncNotifications :: notification = ', notification);
+  var msg = new Date() + ' : ' + notification.code + ' (uid:' + notification.uid + ', msg:' + notification.message + ')\n';
+  $('#notifications').val(msg + $('#notifications').val());
+
   if( 'sync_complete' == notification.code ) {
     // We are interetsed in sync_complete notifications as there may be changes to the dataset
-    console.log('datasetHash = ' + datasetHash);
     if( datasetHash != notification.uid ) {
       // The dataset hash received in the uid parameter is different to the one we have stored.
       // This means that there has been a change in the dataset, so we should invoke the list operation.
@@ -47,8 +48,11 @@ function handleSyncNotifications(notification) {
   }
 }
 
+function clearNotifications() {
+  $('#notifications').val('');
+}
+
 function handleListSuccess(res) {
-  console.log('handleListSuccess :: ', res);
   var tableData = [];
   // Iterate over the dataset to create a record structure which is suitable for the jQuery Data table
   // we are using to display the data (i.e a 2d array)

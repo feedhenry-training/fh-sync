@@ -26,8 +26,10 @@ var sync = (function() {
       // Should a notification event be triggered when an update was applied to the remote data store
       "notify_delta_received": false,
       // Should a notification event be triggered when a delta was received from the remote data store (dataset or record - depending on whether uid is set)
-      "notify_sync_failed": false
+      "notify_sync_failed": false,
       // Should a notification event be triggered when the sync loop failed to complete
+      "do_console_log": false
+      // Should log statements be written to console.log
     },
 
     notifications: {
@@ -75,7 +77,7 @@ var sync = (function() {
     manage: function(dataset_id, options, query_params) {
 
       var doManage = function(dataset) {
-        console.log('doManage dataset :: initialised = ', dataset.initialised, " :: ", dataset_id, ' :: ', options);
+        self.consoleLog('doManage dataset :: initialised = ', dataset.initialised, " :: ", dataset_id, ' :: ', options);
 
         var datasetConfig = JSON.parse(JSON.stringify(options));
         for (var i in options) {
@@ -101,7 +103,7 @@ var sync = (function() {
           self.syncLoop(dataset_id);
         } else {
           if( dataset.timeoutInterval ) {
-            console.log('Clearing timeout for dataset sync loop');
+            self.consoleLog('Clearing timeout for dataset sync loop');
             clearTimeout(dataset.timeoutInterval);
             self.syncLoop(dataset_id);
           }
@@ -119,7 +121,7 @@ var sync = (function() {
           },
           function(err) {
             // No dataset in memory or local storage - create a new one and put it in memory
-            console.log('manage -> getDataSet : ', arguments);
+            self.consoleLog('manage -> getDataSet : ', arguments);
             var dataset = {};
             dataset.pending = {};
             self.datasets[dataset_id] = dataset;
@@ -174,7 +176,7 @@ var sync = (function() {
       var online = true;
 
       // TODO HACK FOR LOCAL DEV - DELETE
-      return callback(online);
+      //return callback(online);
 
       // first, check if navigator.online is available
       if(typeof navigator.onLine != "undefined"){
@@ -192,6 +194,8 @@ var sync = (function() {
         }
       }
 
+      return callback(online);
+
 //      // third, ping app cloud
 //      if (online) {
 //        // ajax call to app ping endpoint
@@ -200,11 +204,11 @@ var sync = (function() {
 //          type: "GET",
 //          timeout: 2000, // 2 second timeout
 //          success: function () {
-//            console.log('ONLINE CHECK OK');
+//            self.consoleLog('ONLINE CHECK OK');
 //            callback(true);
 //          },
 //          error: function () {
-//            console.log('ONLINE CHECK NOT OK');
+//            self.consoleLog('ONLINE CHECK NOT OK');
 //            callback(false);
 //          }
 //        });
@@ -214,7 +218,7 @@ var sync = (function() {
     },
 
     doNotify: function(dataset_id, uid, code, message) {
-      //console.log('doNotify', dataset_id, uid, code, message);
+      //self.consoleLog('doNotify', dataset_id, uid, code, message);
 
       if( self.notify_callback ) {
         if ( self.config['notify_' + code] ) {
@@ -259,7 +263,7 @@ var sync = (function() {
         obj.hash = self.generateHash(JSON.stringify(pendingObj));
         obj.timestamp = new Date().getTime();
 
-        console.log("storePendingObj :: " + JSON.stringify( obj ));
+        self.consoleLog("storePendingObj :: " + JSON.stringify( obj ));
 
         self.getDataSet(dataset_id, function(dataset) {
           if( "update" === action ) {
@@ -275,7 +279,7 @@ var sync = (function() {
           self.doNotify(dataset_id, uid, self.notifications.LOCAL_UPDATE_APPLIED, action);
           if(self.config.auto_sync_local_updates) {
             if( dataset.timeoutInterval ) {
-              console.log('auto_sync_local_updates - clearing timeout for dataset sync loop');
+              self.consoleLog('auto_sync_local_updates - clearing timeout for dataset sync loop');
               clearTimeout(dataset.timeoutInterval);
               self.syncLoop(dataset_id);
             }
@@ -326,13 +330,13 @@ var sync = (function() {
             }
             syncLoopParams.pending = pendingArray;
 
-            console.log('Starting sync loop - global hash = ' + dataSet.hash + ' :: pending = ' + JSON.stringify(pendingArray));
+            self.consoleLog('Starting sync loop - global hash = ', dataSet.hash, ' :: pending = ', JSON.stringify(pendingArray));
 
             $fh.act({
               'act': dataset_id,
               'req': syncLoopParams
             }, function(res) {
-              console.log("Back from Sync Loop : full Dataset = " + (res.records ? " Y" : "N"));
+              self.consoleLog("Back from Sync Loop : full Dataset = " + (res.records ? " Y" : "N"));
               var i, rec;
 
               function processUpdates(updates, notification) {
@@ -355,21 +359,21 @@ var sync = (function() {
                 // Full Dataset returned
                 dataSet.data = res.records;
                 dataSet.hash = res.hash;
-                self.doNotify(dataset_id, null, self.notifications.DELTA_RECEIVED, null);
-                console.log("Full Dataset returned");
+                self.doNotify(dataset_id, res.hash, self.notifications.DELTA_RECEIVED, 'full dataset');
+                self.consoleLog("Full Dataset returned");
                 self.syncComplete(dataset_id,  "online");
 
               }
               else if (res.hash && res.hash !== dataSet.hash) {
-                console.log("Local dataset stale - syncing records :: local hash= ", dataSet.hash, " - remoteHash=", res.hash);
+                self.consoleLog("Local dataset stale - syncing records :: local hash= ", dataSet.hash, " - remoteHash=", res.hash);
                 // Different hash value returned - Sync individual records
                 self.syncRecords(dataset_id);
               } else {
-                console.log("Local dataset up to date");
+                self.consoleLog("Local dataset up to date");
                 self.syncComplete(dataset_id,  "online");
               }
             }, function(msg, err) {
-              console.log("syncLoop failed : ", arguments);
+              self.consoleLog("syncLoop failed : ", arguments);
               self.doNotify(dataset_id, null, self.notifications.SYNC_FAILED, msg);
               self.syncComplete(dataset_id,  msg);
             });
@@ -398,7 +402,7 @@ var sync = (function() {
         syncRecParams.query_params = dataSet.query_params;
         syncRecParams.clientRecs = clientRecs;
 
-        console.log("syncRecParams :: ", syncRecParams);
+        self.consoleLog("syncRecParams :: ", syncRecParams);
 
         $fh.act({
           'act': dataset_id,
@@ -432,18 +436,18 @@ var sync = (function() {
           }
           self.syncComplete(dataset_id, "online");
         }, function(msg, err) {
-          console.log("syncRecords failed : ", arguments);
+          self.consoleLog("syncRecords failed : ", arguments);
           self.syncComplete(dataset_id, msg);
         });
       });
     },
 
     syncComplete: function(dataset_id, status) {
-      //console.log('syncComplete');
+      //self.consoleLog('syncComplete');
       self.saveDataSet(dataset_id);
 
       self.getDataSet(dataset_id, function(dataset) {
-        //console.log("dataset.config.sync_frequency :: " + dataset.config.sync_frequency);
+        //self.consoleLog("dataset.config.sync_frequency :: " + dataset.config.sync_frequency);
         // set timeout for next sync loop execution
         dataset.timeoutInterval = setTimeout(function() {
           self.syncLoop(dataset_id);
@@ -462,12 +466,12 @@ var sync = (function() {
           val: JSON.stringify(dataset)
         }, function() {
           //save success
-          //console.log('save to local storage success');
+          //self.consoleLog('save to local storage success');
         }, function(msg, err) {
           // save failed
           var errMsg = 'save to local storage failed  msg:' + msg + ' err:' + err;
           self.doNotify(dataset_id, null, self.notifications.CLIENT_STORAGE_FAILED, errMsg);
-          console.log(errMsg);
+          self.consoleLog(errMsg);
         });
       });
     },
@@ -487,7 +491,7 @@ var sync = (function() {
           // the user wants sync
           dataset.initialised = false;
           self.datasets[dataset_id] = dataset; // TODO: do we need to handle binary data?
-          console.log('load from local storage success dataset:', dataset);
+          self.consoleLog('load from local storage success dataset:', dataset);
           return success(dataset);
         } else {
           // no data yet, probably first time. failure calback should handle this
@@ -497,9 +501,15 @@ var sync = (function() {
         // load failed
         var errMsg = 'load from local storage failed  msg:' + msg + ' err:' + err;
         self.doNotify(dataset_id, null, self.notifications.CLIENT_STORAGE_FAILED, errMsg);
-        console.log(errMsg);
+        self.consoleLog(errMsg);
       });
+    },
+
+    consoleLog: function() {
+    if( self.config.do_console_log ) {
+      console.log(arguments);
     }
+  }
   };
 
   (function() {

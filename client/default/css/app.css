@@ -1,3 +1,7 @@
 #updateBtn {
   disabled: true;
 }
+
+#notifications {
+  width: 90%
+}
