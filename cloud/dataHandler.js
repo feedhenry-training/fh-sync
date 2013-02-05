@@ -79,20 +79,58 @@ exports.doDelete = function(dataset_id, uid, cb) {
 
 exports.doCollision = function(dataset_id, hash, timestamp, uid, pre, post) {
   console.log("doCollision : ", dataset_id, " :: hash= ", hash, " :: timestamp= ", timestamp, " :: uid= ", uid, " :: pre= ", pre, " :: post= ", post);
-  collisions[hash] = {"uid":uid, "pre":pre, "post":post, "timestamp": timestamp};
+  var fields = {
+    "hash" : hash,
+    "timestamp" : timestamp,
+    "uid" : uid,
+    "pre" : pre,
+    "post" : post
+  };
+
+  $fh.db({
+    "act": "create",
+    "type": dataset_id + '_collision',
+    "fields": fields
+  });
 };
 
 exports.listCollisions = function(dataset_id, cb) {
-  return cb(null, collisions);
+  $fh.db({
+    "act": "list",
+    "type": dataset_id + '_collision'
+  }, function(err, res) {
+    if(err) return cb(err);
+
+    var resJson = {};
+
+    for (var di = 0; di < res.list.length; di++) {
+      resJson[res.list[di].fields.hash] = res.list[di].fields;
+    }
+
+    cb(null, resJson);
+  });
 };
 
 exports.removeCollision = function(dataset_id, hash, cb) {
-  var res = collisions[hash];
+  $fh.db({
+    "act": "list",
+    "type": dataset_id + '_collision',
+    "eq": {
+      "hash": hash
+    },
+  }, function(err, data) {
+    if(err) cb(err);
+    console.log('removeCollision : ', data)
 
-  if( res ) {
-    delete collisions[hash];
-    return cb(null, null);
-  } else {
-    return cb("removeCollision :: No collision found for hash " + hash);
-  }
+    if( data.list && data.list.length == 1 ) {
+      var guid = data.list[0].guid;
+      $fh.db({
+        "act": "delete",
+        "type": dataset_id + '_collision',
+        "guid": guid
+      }, cb);
+    } else {
+      return cb("removeCollision :: No collision found for hash " + hash);
+    }
+  });
 }

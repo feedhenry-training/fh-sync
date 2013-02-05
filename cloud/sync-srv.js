@@ -13,6 +13,9 @@ exports.stop = function(dataset_id, callback) {
   return stopDatasetSync(dataset_id, callback);
 };
 
+exports.stopAll = function(dataset_id, callback) {
+  return stopAllDatasetSync(dataset_id, callback);
+};
 
 exports.handleList = function(dataset_id, fn) {
   getDataset(dataset_id, function(err, dataset) {
@@ -63,7 +66,6 @@ exports.handleCollision = function(dataset_id, fn) {
 };
 
 exports.listCollisions = function(dataset_id, fn) {
-  console.log('!!!!!!!!!!!!!!!listCollisions - ', fn);
   getDataset(dataset_id, function(err, dataset) {
     if( ! err ) {
       dataset.collisionLister = fn;
@@ -114,6 +116,18 @@ function stopDatasetSync(dataset_id, cb) {
   });
 }
 
+function stopAllDatasetSync(cb) {
+
+  var datasets = [];
+  async.forEachSeries(datasets, function(dataset, itemCallback) {
+    datasets.push(dataset.id);
+    stopDatasetSync(dataset.id, itemCallback);
+  },
+  function(err) {
+    cb(err, datasets);
+  });
+}
+
 function doInvoke(dataset_id, params, callback) {
 
   // Verify that fn param has been passed
@@ -127,7 +141,7 @@ function doInvoke(dataset_id, params, callback) {
   // Verify that fn param is valid
   var fnHandler = invokeFunctions[fn];
   if( ! fnHandler ) {
-    return callback("unknown_fn", null);
+    return callback("unknown_fn : " + fn, null);
   }
 
   return fnHandler(dataset_id, params, callback);
@@ -487,6 +501,7 @@ function createDataset(dataset_id, cb) {
   var dataset = datasets[dataset_id];
   if( ! dataset ) {
     dataset = {};
+    dataset.id = dataset_id;
     dataset.created = new Date().getTime();
     dataset.syncLists = {};
     dataset.timeouts = {};
@@ -502,7 +517,7 @@ function removeDataset(dataset_id, cb) {
 
   delete datasets[dataset_id];
 
-  cb();
+  cb(null, {});
 }
 
 function generateHash(plainText) {

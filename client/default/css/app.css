@@ -5,3 +5,58 @@
 #notifications {
   width: 90%
 }
+
+.json-editor .item > .property {
+    background-color: #72C076 !important;
+}
+#jsoneditorPre.json-editor .item > .property {
+    background-color: #77A7EE !important;
+}
+#jsoneditorPost.json-editor .item > .property {
+    background-color: #E77474 !important;
+}
+#jsoneditorPre.json-editor .item > .value, #jsoneditorPost.json-editor .item > .value {
+    background-color: #D8DAD1;
+}
+
+.json-editor .item.collision > .property {
+    background-color: #009408 !important;
+}
+#jsoneditorPre.json-editor .item.collision > .property {
+    background-color: #0C479E !important;
+}
+#jsoneditorPost.json-editor .item.collision > .property {
+    background-color: #941414 !important;
+}
+#jsoneditorPre.json-editor .item.collision > .value, #jsoneditorPost.json-editor .item.collision > .value {
+    background-color: #B0B1AB;
+}
+.json-editor .item.collision > .value {
+    background-color: #DDEE79;
+}
+
+.json-editor .item {
+    border: 3px solid transparent;
+    padding: 3px;
+    border-radius: 7px;
+}
+
+.json-editor .collision.item {
+    border: 3px solid brown;
+    padding: 3px;
+    border-radius: 7px;
+}
+
+.btnCopy {
+    position: relative;
+    padding: 4px 8px;
+}
+
+
+.btnCopyPre {
+    left: 12px;
+}
+
+.btnCopyPost {
+    left: -38px;
+}

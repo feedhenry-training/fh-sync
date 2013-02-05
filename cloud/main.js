@@ -7,20 +7,31 @@ var dataHandler = require('./dataHandler.js');
  * - the return 'callback' method signature is 'callback (error, data)', where 'data' is a JSON object.
  */
 
-/* 'helloWorld' server side REST API method.
- * Where it always begins. Not related to Data Sync... just a simple hellow world function which can be used to ensure
- * cloud code is running.
- */
-exports.helloWorld = function(params, callback) {
-    console.log("In helloWorld() call");
-    return callback(null, {"hello": "world"});
-};
-
 
 /* dataset_id = The namespace for the dataset. This allows multiple different datasets to be managed
-by a single applications.
+ by a single applications.
  */
 var dataset_id = "myShoppingList";
+
+/* To allow the sync client to interact with the cloud dataset, a function is required in main.js who's
+ * name is the same as the dataset_id - in this case "myShoppingList". The implmentation for this function
+ * is alwyas a call to sync.invoke() - passing the dataset_id, the request parameters and the callback.
+ *
+ */
+exports.myShoppingList = function(params, callback) {
+  return sync.invoke(dataset_id, params, callback);
+};
+
+/* Public function to support stoping syncronisation of an individual dataset */
+exports.stopSync = function(params, callback) {
+  return sync.stop(dataset_id, callback);
+};
+
+/* Public function to support stoping syncronisation of all datasets (Since there is only 1 dataset active in this
+ * example, the stopAllSync() function is somewhat redundent */
+exports.stopAllSync = function(params, callback) {
+  return sync.stopAll(callback);
+};
 
 /*
  * The Data Sync Framework manages syncing data between the App Cloud and the App Client (i.e. mobile device).
@@ -38,7 +49,3 @@ sync.init(dataset_id, {}, function() {
   sync.listCollisions(dataset_id, dataHandler.listCollisions);
   sync.removeCollision(dataset_id, dataHandler.removeCollision);
 });
-
-exports.myShoppingList = function (params, callback) {
-  return sync.invoke('myShoppingList', params, callback);
-};

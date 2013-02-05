@@ -5,6 +5,22 @@ var table;
 $(document).ready(function() {
 
   $('#updateBtn').attr('disabled', 'disabled');
+  $('#collisions_editor').hide();
+
+  jsoneditorCurrent = $('#jsoneditorCurrent');
+  jsoneditorPre = $('#jsoneditorPre');
+  jsoneditorPost = $('#jsoneditorPost');
+
+  //Bind tab events
+  $('a[data-toggle="tab"]').on('shown', function (e) {
+    e.target // activated tab
+    e.relatedTarget // previous tab
+
+    if(e.target.id == 'tabCollision' ) {
+      getCollisions();
+    }
+  });
+
   initSync();
 });
 
@@ -70,6 +86,7 @@ function handleListSuccess(res) {
     row.push(controls.join(""));
     tableData.push(row);
   }
+
   reloadTable(tableData);
 }
 
@@ -129,8 +146,15 @@ function updateItem() {
 
 function reloadTable(contents) {
   console.log('reloadTable :: ', contents);
-  // Create a table to store the Sync Data
-  $('#table').html( '<table cellpadding="0" cellspacing="0" border="0" class="table table-striped table-bordered" id="shoppingList"></table>' );
+  if( contents.length == 0 ) {
+    $('#nosyncdata').show();
+    $('#table').hide();
+    return;
+  }
+
+  // show the table & hide the no data message
+  $('#nosyncdata').hide();
+  $('#table').show();
 
   table = $('#shoppingList').dataTable( {
     "bDestroy":true,

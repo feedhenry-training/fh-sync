@@ -169,14 +169,28 @@ var sync = (function() {
       self.addPendingObj(dataset_id, uid, null, "delete", success, failure);
     },
 
+    listCollisions : function(dataset_id, success, failure){
+      $fh.act({
+        "act": dataset_id,
+        "req": {
+          "fn": "listCollisions"
+        }
+      }, success, failure);
+    },
 
+    removeCollision: function(dataset_id, colissionHash, success, failure) {
+      $fh.act({
+        "act": dataset_id,
+        "req": {
+          "fn": "removeCollision",
+          "hash": colissionHash
+        }
+      }, success, failure);
+    },
 
     // PRIVATE FUNCTIONS
     isOnline: function(callback) {
       var online = true;
-
-      // TODO HACK FOR LOCAL DEV - DELETE
-      //return callback(online);
 
       // first, check if navigator.online is available
       if(typeof navigator.onLine != "undefined"){
@@ -195,26 +209,6 @@ var sync = (function() {
       }
 
       return callback(online);
-
-//      // third, ping app cloud
-//      if (online) {
-//        // ajax call to app ping endpoint
-//        $fh.__ajax({
-//          url:"/sys/info/ping",
-//          type: "GET",
-//          timeout: 2000, // 2 second timeout
-//          success: function () {
-//            self.consoleLog('ONLINE CHECK OK');
-//            callback(true);
-//          },
-//          error: function () {
-//            self.consoleLog('ONLINE CHECK NOT OK');
-//            callback(false);
-//          }
-//        });
-//      } else {
-//        callback(false);
-//      }
     },
 
     doNotify: function(dataset_id, uid, code, message) {
@@ -524,6 +518,8 @@ var sync = (function() {
     create: self.create,
     read: self.read,
     update: self.update,
-    'delete': self['delete']
+    'delete': self['delete'],
+    listCollisions: self.listCollisions,
+    removeCollision: self.removeCollision
   };
 })();
