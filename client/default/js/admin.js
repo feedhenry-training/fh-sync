@@ -56,8 +56,7 @@ var syncAdmin = (function() {
       // we are using to display the data (i.e a 2d array)
 
       var controls = [];
-      controls.push('<button class="btn manage">Manage</button>&nbsp;');
-      controls.push('<button class="btn discard">Discard</button>&nbsp;');
+      controls.push('<button class="btn manage btn-small"><i class="icon-pencil"></i> Manage</button>&nbsp;');
 
       for( i in res ) {
         var row = [];
