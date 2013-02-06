@@ -156,6 +156,18 @@ h4.center {
     background-color: #DDEE79;
 }
 
+#updateBtn {
+  margin-top: -9px;
+}
+
+#addBtn {
+  margin-top: -9px;
+}
+
+#addBtn, #updateBtn {
+  width: 75px;
+}
+
 .json-editor .item {
     border: 3px solid transparent;
     padding: 3px;
