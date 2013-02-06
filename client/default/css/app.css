@@ -168,16 +168,20 @@ h4.center {
     border-radius: 7px;
 }
 
-.btnCopy {
-    position: relative;
-    padding: 4px 8px;
+.btnCopyPre {
+  float: right;
+  margin-top: 47px;
 }
 
-
-.btnCopyPre {
-    left: 12px;
+.btnCopy {
+  width: 70px;
 }
 
 .btnCopyPost {
-    left: -38px;
+  float: right;
+  margin-top: 47px;
+}
+
+#collisions_editor .bottom-pad {
+  padding-bottom: 32px;
 }
