@@ -12,16 +12,16 @@
 
         <ul class="nav nav-tabs">
           <li class="active"><a href="#enduser" id="tabSync" data-toggle="tab">End User</a></li>
-          <li ><a href="#collisions" id="tabCollision" data-toggle="tab">Administrator Colission Management</a></li>
+          <li ><a href="#collisions" id="tabCollision" data-toggle="tab">Administrator</a></li>
         </ul>
 
         <div class="tab-content">
           <div class="tab-pane active" id="enduser">
             <p>End user view for Data Sync. Add, update and delete items in the list & see them get syncronized across multiple instances of the app.</p>
-            <p>Use the "online" checkbox to simulate being off line - useful for generating data colissions (updating a stale record)</p>
 
             <div id="online">
-              Online: <input type="checkbox" checked="checked" name="isOnline" id="isOnlineChk" onclick="setOnline()"/>
+              Online: <input type="checkbox" checked="checked" name="isOnline" id="isOnlineChk"/>
+              <span class="label label-info">Use the "online" checkbox to simulate being off line - useful for generating data colissions (updating a stale record)</span>
             </div>
 
             <div id="nosyncdata">
@@ -32,23 +32,22 @@
             <div id="table">
               <table cellpadding="0" cellspacing="0" border="0" class="table table-striped table-bordered" id="shoppingList"></table>
             </div>
-
             <br/>
 
             <div id="updater">
               <input type="text" placeholder="Select an Item from the list to update" class="input-xlarge" id="itemUp" name="itemUp" />
               <input type="hidden" id="itemUpId"/>
-              <input type="button" id="updateBtn" value="Update" onclick="updateItem()" />
+              <button id="updateBtn" class="btn btn-primary">Update</button>
             </div>
 
             <div id="adder">
               <input type="text" placeholder="Add New Item" class="input-xlarge" id="itemIn" name="itemIn" />
-              <input type="button" value="Add" cls="btn" onclick="addItem()" />
+              <button id="addBtn" class="btn btn-primary" type="button">Add</button>
             </div>
 
 
             <textarea id='notifications' rows=10></textarea>
-            <input type="button" value="Clear" cls="btn" onclick="clearNotifications()" />
+            <button id="clearNotificationsBtn" value="Clear" class="btn btn-inverse">Clear</button>
           </div>
 
           <div class="tab-pane" id="collisions">
@@ -56,13 +55,15 @@
 
             <div id="collisions_manager">
               <div id="no_collisions">
-                <p>There are currently no collisions. Click the "Reload Collisions" button to check for new collisions.</p>
+                <span class="label label-info">There are currently no collisions. Click the "Reload Collisions" button to check for new collisions.</span>
               </div>
 
-              <div id="collisions_list" class="collisions_view container-fluid">
+              <div id="collisions_list" class="collisions_view ">
                 <table cellpadding="0" cellspacing="0" border="0" class="table table-striped table-bordered" id="collisionsTable"></table>
               </div>
-              <button id="btnReloadCollisions" class="btn btn-primary pull-left" onclick="getCollisions()">Reload Collisions</button>
+              <br/>
+              <button id="btnReloadCollisions" class="btn btn-primary pull-left">Reload Collisions</button>
+
             </div>
 
             <div id="collisions_editor" class="collisions_view container-fluid">
@@ -114,14 +115,14 @@
     </div>
   </div>
 
-  <script src="js/json2.js"></script>
-  <script src="js/sha1.js"></script>
-  <script src="js/sync-cli.js"></script>
-  <script src="js/jquery-1.9.0.js"></script>
-  <script src="js/bootstrap.js"></script>
-  <script src="js/jquery.dataTables.js"></script>
-  <script src="js/jquery.jsoneditor.js"></script>
+  <script src="js/libs/json2.js"></script>
+  <script src="js/libs/sha1.js"></script>
+  <script src="js/libs/sync-cli.js"></script>
+  <script src="js/libs/jquery-1.9.0.js"></script>
+  <script src="js/libs/bootstrap.js"></script>
+  <script src="js/libs/jquery.dataTables.js"></script>
+  <script src="js/libs/jquery.jsoneditor.js"></script>
 
   <script src="js/app.js"></script>
-
+  <script src="js/user.js"></script>
   <script src="js/admin.js"></script>

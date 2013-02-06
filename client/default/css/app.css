@@ -2,8 +2,24 @@
   disabled: true;
 }
 
+#online {
+    padding: 5px;
+}
+
+#updater {
+    padding-top: 5px;
+}
+
+.nav {
+    margin-bottom: 10px;
+}
+
 #notifications {
   width: 90%
+}
+
+#collisionsTable, #shoppingList {
+    width: 100% !important;
 }
 
 .json-editor .item > .property {
