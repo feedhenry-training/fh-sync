@@ -34,7 +34,7 @@ var syncUser = (function() {
       $fh.sync.manage(datasetId, {});
 
       // Request the initial dataset from the sync service
-      $fh.sync.list(datasetId, self.handleListSuccess, self.handleListFailure);
+      $fh.sync.doList(datasetId, self.handleListSuccess, self.handleListFailure);
     },
 
     handleSyncNotifications: function(notification) {
