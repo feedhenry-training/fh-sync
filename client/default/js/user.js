@@ -183,7 +183,7 @@ var syncUser = (function() {
       $fh.sync.read(datasetId, row[0], function(res) {
         var doDelete = confirm('Are you sure you wish to delete this row')
         if( doDelete ) {
-          $fh.sync.delete(datasetId, row[0], function(res) {
+          $fh.sync["delete"](datasetId, row[0], function(res) {
             console.log('Delete item success');
           },
           function(code, msg) {
