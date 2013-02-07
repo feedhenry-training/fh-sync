@@ -79,14 +79,9 @@ var sync = (function() {
       var doManage = function(dataset) {
         self.consoleLog('doManage dataset :: initialised = ', dataset.initialised, " :: ", dataset_id, ' :: ', options);
 
-        var datasetConfig = JSON.parse(JSON.stringify(options));
-        for (var i in options) {
-          datasetConfig[i] = options[i];
-        }
-
         // Make sure config is initialised
         if( ! self.config ) {
-          self.config = self.defaults;
+          self.config = JSON.parse(JSON.stringify(self.defaults));
         }
 
         var datasetConfig = JSON.parse(JSON.stringify(self.config));
