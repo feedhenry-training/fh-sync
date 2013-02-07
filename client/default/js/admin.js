@@ -129,7 +129,7 @@ var syncAdmin = (function() {
       });
 
       //Read the current version of the record
-      $fh.sync.read(datasetId, recordUid, function(record) {
+      $fh.sync.doRead(datasetId, recordUid, function(record) {
         var collisionRec = self.collisionRecord[collisionHash];
         self.activeCollision = {
           "pre" : collisionRec.pre,
@@ -254,7 +254,7 @@ var syncAdmin = (function() {
 
     doSaveCollision: function(collisionHash, recordUid) {
       console.log('currentRec = ', self.activeCollision.current);
-      $fh.sync.update(datasetId, recordUid, self.activeCollision.current, function(res) {
+      $fh.sync.doUpdate(datasetId, recordUid, self.activeCollision.current, function(res) {
         alert('Collision successfully resolved');
         self.doDiscardCollision(collisionHash, true);
       }, function(code, msg) {

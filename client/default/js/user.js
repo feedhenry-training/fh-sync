@@ -34,7 +34,7 @@ var syncUser = (function() {
       $fh.sync.manage(datasetId, {});
 
       // Request the initial dataset from the sync service
-      $fh.sync.list(datasetId, self.handleListSuccess, self.handleListFailure);
+      $fh.sync.doList(datasetId, self.handleListSuccess, self.handleListFailure);
     },
 
     handleSyncNotifications: function(notification) {
@@ -47,7 +47,7 @@ var syncUser = (function() {
           // The dataset hash received in the uid parameter is different to the one we have stored.
           // This means that there has been a change in the dataset, so we should invoke the list operation.
           datasetHash = notification.uid;
-          $fh.sync.list(datasetId, self.handleListSuccess, self.handleListFailure);
+          $fh.sync.doList(datasetId, self.handleListSuccess, self.handleListFailure);
         }
       }
     },
@@ -90,7 +90,7 @@ var syncUser = (function() {
         "name" : name,
         "created" : created
       };
-      $fh.sync.create(datasetId, dataItem, function(res) {
+      $fh.sync.doCreate(datasetId, dataItem, function(res) {
         console.log('Create item success');
       }, function(code, msg) {
         alert('An error occured while creating data : (' + code + ') ' + msg);
@@ -111,13 +111,13 @@ var syncUser = (function() {
       $('#updateBtn').attr('disabled', 'disabled');
 
       // Read the full record from the sync service
-      $fh.sync.read(datasetId, uid, function(res) {
+      $fh.sync.doRead(datasetId, uid, function(res) {
         var data = res.data;
         // Update the name field with the updated value from the text box
         data.name = name;
 
         // Send the update to the sync service
-        $fh.sync.update(datasetId, uid, data, function(res) {
+        $fh.sync.doUpdate(datasetId, uid, data, function(res) {
           console.log('Update item success');
         },
         function(code, msg) {
@@ -168,7 +168,7 @@ var syncUser = (function() {
     },
 
     doEditRow: function(row) {
-      $fh.sync.read(datasetId, row[0], function(res) {
+      $fh.sync.doRead(datasetId, row[0], function(res) {
         console.log('read ', res);
         $('#itemUp').val(res.data.name);
         $('#itemUpId').val(row[0]);
@@ -180,7 +180,7 @@ var syncUser = (function() {
     },
 
     doDeleteRow: function(row) {
-      $fh.sync.read(datasetId, row[0], function(res) {
+      $fh.sync.doRead(datasetId, row[0], function(res) {
         var doDelete = confirm('Are you sure you wish to delete this row')
         if( doDelete ) {
           $fh.sync["delete"](datasetId, row[0], function(res) {

@@ -1,7 +1,7 @@
 var datasetId = 'myShoppingList';
 var datasetHash;
 
-$(document).ready(function() {
+$fh.ready(function() {
 
   //Bind tab events
   $('a[data-toggle="tab"]').on('shown', function (e) {
