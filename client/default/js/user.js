@@ -47,7 +47,7 @@ var syncUser = (function() {
           // The dataset hash received in the uid parameter is different to the one we have stored.
           // This means that there has been a change in the dataset, so we should invoke the list operation.
           datasetHash = notification.uid;
-          $fh.sync.list(datasetId, self.handleListSuccess, self.handleListFailure);
+          $fh.sync.doList(datasetId, self.handleListSuccess, self.handleListFailure);
         }
       }
     },
