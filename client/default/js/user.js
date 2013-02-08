@@ -13,6 +13,9 @@ var syncUser = (function() {
       $('#addBtn').unbind().click(self.addItem);
       $('#clearNotificationsBtn').unbind().click(self.clearNotifications);
 
+
+
+
       // Initialise the Sync Service. See XXXX for details on initialisation options
       $fh.sync.init({
         "sync_frequency": 5,
@@ -33,8 +36,6 @@ var syncUser = (function() {
       // Get the Sync service to manage the dataset called "myShoppingList"
       $fh.sync.manage(datasetId, {});
 
-      // Request the initial dataset from the sync service
-      $fh.sync.doList(datasetId, self.handleListSuccess, self.handleListFailure);
     },
 
     handleSyncNotifications: function(notification) {
