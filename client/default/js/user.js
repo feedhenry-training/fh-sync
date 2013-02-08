@@ -38,11 +38,11 @@ var syncUser = (function() {
     },
 
     handleSyncNotifications: function(notification) {
-      var msg = new Date() + ' : ' + notification.code + ' (uid:' + notification.uid + ', msg:' + notification.message + ')\n';
+      var msg = moment().format('YYYY-MM-DD HH:mm:ss') + ' : ' + notification.code + ' (uid:' + notification.uid + ', msg:' + notification.message + ')\n';
       $('#notifications').val(msg + $('#notifications').val());
 
       if( 'sync_complete' == notification.code ) {
-        // We are interetsed in sync_complete notifications as there may be changes to the dataset
+        // We are interested in sync_complete notifications as there may be changes to the dataset
         if( datasetHash != notification.uid ) {
           // The dataset hash received in the uid parameter is different to the one we have stored.
           // This means that there has been a change in the dataset, so we should invoke the list operation.
@@ -70,7 +70,7 @@ var syncUser = (function() {
         var rec = res[i];
         row.push(i);
         row.push(rec.data.name);
-        row.push(new Date(rec.data.created));
+        row.push(moment(rec.data.created).format('YYYY-MM-DD HH:mm:ss'));
         row.push(controls.join(""));
         tableData.push(row);
       }

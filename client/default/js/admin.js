@@ -64,7 +64,7 @@ var syncAdmin = (function() {
         var rec = res[i];
         row.push(i);
         row.push(rec.uid);
-        row.push(new Date(rec.timestamp));
+        row.push(moment(rec.timestamp).format('YYYY-MM-DD HH:mm:ss'));
         row.push(controls.join(""));
         tableData.push(row);
       }
@@ -97,6 +97,8 @@ var syncAdmin = (function() {
           { "sTitle": "Controls", "bSortable": false, "sClass": "controls" }
         ]
       });
+
+      self.collisionsTable.fnSetColumnVis( 0, false );
 
       $('tr td .manage, tr td .discard, tr td:not(.controls,.dataTables_empty)').unbind().click(function() {
         var row = $(this).parent().parent();
