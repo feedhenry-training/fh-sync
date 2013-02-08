@@ -13,6 +13,6 @@ $fh.ready(function() {
     }
   });
 
-  syncUser.init();
-  syncAdmin.init();
+ // syncUser.init();
+ //  syncAdmin.init();
 });
