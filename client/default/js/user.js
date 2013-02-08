@@ -13,8 +13,11 @@ var syncUser = (function() {
       $('#addBtn').unbind().click(self.addItem);
       $('#clearNotificationsBtn').unbind().click(self.clearNotifications);
 
+
+
+
       // Initialise the Sync Service. See XXXX for details on initialisation options
-      sync.init({
+      $fh.sync.init({
         "sync_frequency": 5,
         "auto_sync_local_updates": true,
         "notify_client_storage_failed": true,
@@ -28,13 +31,11 @@ var syncUser = (function() {
       });
 
       // Provide handler function for receiving notifications from sync service - e.g. data changed
-      sync.notify(self.handleSyncNotifications);
+      $fh.sync.notify(self.handleSyncNotifications);
 
       // Get the Sync service to manage the dataset called "myShoppingList"
-      sync.manage(datasetId, {});
+      $fh.sync.manage(datasetId, {});
 
-      // Request the initial dataset from the sync service
-      sync.list(datasetId, self.handleListSuccess, self.handleListFailure);
     },
 
     handleSyncNotifications: function(notification) {
@@ -47,7 +48,7 @@ var syncUser = (function() {
           // The dataset hash received in the uid parameter is different to the one we have stored.
           // This means that there has been a change in the dataset, so we should invoke the list operation.
           datasetHash = notification.uid;
-          sync.list(datasetId, self.handleListSuccess, self.handleListFailure);
+          $fh.sync.doList(datasetId, self.handleListSuccess, self.handleListFailure);
         }
       }
     },
@@ -90,7 +91,7 @@ var syncUser = (function() {
         "name" : name,
         "created" : created
       };
-      sync.create(datasetId, dataItem, function(res) {
+      $fh.sync.doCreate(datasetId, dataItem, function(res) {
         console.log('Create item success');
       }, function(code, msg) {
         alert('An error occured while creating data : (' + code + ') ' + msg);
@@ -111,13 +112,13 @@ var syncUser = (function() {
       $('#updateBtn').attr('disabled', 'disabled');
 
       // Read the full record from the sync service
-      sync.read(datasetId, uid, function(res) {
+      $fh.sync.doRead(datasetId, uid, function(res) {
         var data = res.data;
         // Update the name field with the updated value from the text box
         data.name = name;
 
         // Send the update to the sync service
-        sync.update(datasetId, uid, data, function(res) {
+        $fh.sync.doUpdate(datasetId, uid, data, function(res) {
           console.log('Update item success');
         },
         function(code, msg) {
@@ -168,7 +169,7 @@ var syncUser = (function() {
     },
 
     doEditRow: function(row) {
-      sync.read(datasetId, row[0], function(res) {
+      $fh.sync.doRead(datasetId, row[0], function(res) {
         console.log('read ', res);
         $('#itemUp').val(res.data.name);
         $('#itemUpId').val(row[0]);
@@ -180,10 +181,10 @@ var syncUser = (function() {
     },
 
     doDeleteRow: function(row) {
-      sync.read(datasetId, row[0], function(res) {
+      $fh.sync.doRead(datasetId, row[0], function(res) {
         var doDelete = confirm('Are you sure you wish to delete this row')
         if( doDelete ) {
-          sync.delete(datasetId, row[0], function(res) {
+          $fh.sync["delete"](datasetId, row[0], function(res) {
             console.log('Delete item success');
           },
           function(code, msg) {
