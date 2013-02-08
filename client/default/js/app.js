@@ -3,6 +3,8 @@ var datasetHash;
 
 $(document).ready(function() {
 
+  $("[rel='popover']").popover();
+
   //Bind tab events
   $('a[data-toggle="tab"]').on('shown', function (e) {
     e.target // activated tab

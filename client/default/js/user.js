@@ -62,8 +62,8 @@ var syncUser = (function() {
       // we are using to display the data (i.e a 2d array)
 
       var controls = [];
-      controls.push('<button class="btn edit">Edit</button>&nbsp;');
-      controls.push('<button class="btn delete">Delete</button>&nbsp;');
+      controls.push('<button class="btn edit btn-small"><i class="icon-pencil"></i> Edit</button>&nbsp;');
+      controls.push('<button class="btn delete btn-small"><i class="icon-trash"></i> Delete</button>&nbsp;');
 
       for( i in res ) {
         var row = [];
@@ -146,10 +146,10 @@ var syncUser = (function() {
         "bFilter": false,
         "aaData": contents,
         "aoColumns": [
-          { "sTitle": "UID" },
-          { "sTitle": "Food Item" },
-          { "sTitle": "Date Created" },
-          { "sTitle": "Controls", "bSortable": false, "sClass": "controls" }
+          { "sTitle": "UID", "sWidth": "150" },
+          { "sTitle": "Item Text" },
+          { "sTitle": "Date Created", "sWidth": "300" },
+          { "sTitle": "Controls", "bSortable": false, "sClass": "controls", "sWidth": "150" }
         ]
       });
 
