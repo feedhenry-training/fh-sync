@@ -200,8 +200,8 @@ var syncAdmin = (function() {
               "height": 0
             });
             copyPreBtn.append($('<button>', {
-              "class": "btn btn-inverse btnCopy btn-mini btnCopyPre",
-              "text": "Copy >"
+              "class": "btn btn-inverse btnCopy btnCopyPre",
+              "text": ">"
             }));
             copyPreBtn.on('click', copyClickHandler);
 
@@ -223,8 +223,8 @@ var syncAdmin = (function() {
               "position": "absolute"
             });
             copyPostBtn.append($('<button>', {
-              "class": "btn btn-inverse btn-mini btnCopy btnCopyPost",
-              "text": "< Copy"
+              "class": "btn btn-inverse btnCopy btnCopyPost",
+              "text": "< "
             }));
             copyPostBtn.on('click', copyClickHandler);
 

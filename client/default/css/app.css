@@ -181,17 +181,15 @@ h4.center {
 }
 
 .btnCopyPre {
-  float: right;
-  margin-top: 47px;
+  margin-left: 12px;
 }
 
-.btnCopy {
+.xbtnCopy {
   width: 70px;
 }
 
 .btnCopyPost {
-  float: right;
-  margin-top: 47px;
+  margin-left: -47px;
 }
 
 #collisions_editor .bottom-pad {
