@@ -11,10 +11,10 @@ $fh.ready(function() {
     e.relatedTarget // previous tab
 
     if(e.target.id == 'tabCollision' ) {
-      syncAdmin.reloadCollisions();
+   //   syncAdmin.reloadCollisions();
     }
   });
 
-  syncUser.init();
-  syncAdmin.init();
+ // syncUser.init();
+ //  syncAdmin.init();
 });
