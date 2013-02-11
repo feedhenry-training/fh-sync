@@ -118,6 +118,7 @@ var syncAdmin = (function() {
     },
 
     doManageCollision: function(data) {
+      console.log(data);
       var collisionHash = data[0];
       var recordUid = data[1];
       // Bind the discard button
