@@ -56,15 +56,14 @@ var syncAdmin = (function() {
       // we are using to display the data (i.e a 2d array)
 
       var controls = [];
-      controls.push('<button class="btn manage">Manage</button>&nbsp;');
-      controls.push('<button class="btn discard">Discard</button>&nbsp;');
+      controls.push('<button class="btn manage btn-small"><i class="icon-pencil"></i> Manage</button>&nbsp;');
 
       for( i in res ) {
         var row = [];
         var rec = res[i];
         row.push(i);
         row.push(rec.uid);
-        row.push(new Date(rec.timestamp));
+        row.push(moment(rec.timestamp).format('YYYY-MM-DD HH:mm:ss'));
         row.push(controls.join(""));
         tableData.push(row);
       }
@@ -97,6 +96,8 @@ var syncAdmin = (function() {
           { "sTitle": "Controls", "bSortable": false, "sClass": "controls" }
         ]
       });
+
+      self.collisionsTable.fnSetColumnVis( 0, false );
 
       $('tr td .manage, tr td .discard, tr td:not(.controls,.dataTables_empty)').unbind().click(function() {
         var row = $(this).parent().parent();
@@ -223,7 +224,7 @@ var syncAdmin = (function() {
             });
             copyPostBtn.append($('<button>', {
               "class": "btn btn-inverse btnCopy btnCopyPost",
-              "text": "<"
+              "text": "< "
             }));
             copyPostBtn.on('click', copyClickHandler);
 
