@@ -129,7 +129,7 @@ var syncAdmin = (function() {
       $('.save_collision_button').unbind().click(function() {
         self.doSaveCollision(collisionHash, recordUid);
       });
-
+      console.log(recordUid);
       //Read the current version of the record
       $fh.sync.doRead(datasetId, recordUid, function(record) {
         var collisionRec = self.collisionRecord[collisionHash];
