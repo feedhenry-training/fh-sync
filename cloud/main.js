@@ -1,4 +1,3 @@
-var sync = require('./sync-srv.js');
 var dataHandler = require('./dataHandler.js');
 
 /* main.js
@@ -19,18 +18,18 @@ var dataset_id = "myShoppingList";
  *
  */
 exports.myShoppingList = function(params, callback) {
-  return sync.invoke(dataset_id, params, callback);
+  return $fh.sync.invoke(dataset_id, params, callback);
 };
 
 /* Public function to support stoping syncronisation of an individual dataset */
 exports.stopSync = function(params, callback) {
-  return sync.stop(dataset_id, callback);
+  return $fh.sync.stop(dataset_id, callback);
 };
 
 /* Public function to support stoping syncronisation of all datasets (Since there is only 1 dataset active in this
  * example, the stopAllSync() function is somewhat redundent */
 exports.stopAllSync = function(params, callback) {
-  return sync.stopAll(callback);
+  return $fh.sync.stopAll(callback);
 };
 
 /*
@@ -39,13 +38,13 @@ exports.stopAllSync = function(params, callback) {
  * and the App Cloud. In this sample app, the "back end data store" is a simple Cloud Database which is implemented
  * using the $fh.db() API. See dataHandler.js for the implementation of the various functions defined below.
  */
-sync.init(dataset_id, {}, function() {
-  sync.handleList(dataset_id, dataHandler.doList);
-  sync.handleCreate(dataset_id, dataHandler.doCreate);
-  sync.handleRead(dataset_id, dataHandler.doRead);
-  sync.handleUpdate(dataset_id, dataHandler.doUpdate);
-  sync.handleDelete(dataset_id, dataHandler.doDelete);
-  sync.handleCollision(dataset_id, dataHandler.doCollision);
-  sync.listCollisions(dataset_id, dataHandler.listCollisions);
-  sync.removeCollision(dataset_id, dataHandler.removeCollision);
+$fh.sync.init(dataset_id, {}, function() {
+  $fh.sync.handleList(dataset_id, dataHandler.doList);
+  $fh.sync.handleCreate(dataset_id, dataHandler.doCreate);
+  $fh.sync.handleRead(dataset_id, dataHandler.doRead);
+  $fh.sync.handleUpdate(dataset_id, dataHandler.doUpdate);
+  $fh.sync.handleDelete(dataset_id, dataHandler.doDelete);
+  $fh.sync.handleCollision(dataset_id, dataHandler.doCollision);
+  $fh.sync.listCollisions(dataset_id, dataHandler.listCollisions);
+  $fh.sync.removeCollision(dataset_id, dataHandler.removeCollision);
 });
