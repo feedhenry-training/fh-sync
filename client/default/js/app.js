@@ -1,7 +1,7 @@
 var datasetId = 'myShoppingList';
 var datasetHash;
 
-$fh.ready(function() {
+$(document).ready(function() {
 
   $("[rel='popover']").popover();
 
@@ -11,7 +11,8 @@ $fh.ready(function() {
     e.relatedTarget // previous tab
 
     if(e.target.id == 'tabCollision' ) {
-     syncAdmin.reloadCollisions();
+
+      syncAdmin.reloadCollisions();
     }
   });
 
