@@ -11,6 +11,7 @@ $(document).ready(function() {
     e.relatedTarget // previous tab
 
     if(e.target.id == 'tabCollision' ) {
+
       syncAdmin.reloadCollisions();
     }
   });

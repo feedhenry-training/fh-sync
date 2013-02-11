@@ -91,6 +91,8 @@ exports.doCollision = function(dataset_id, hash, timestamp, uid, pre, post) {
     "act": "create",
     "type": dataset_id + '_collision',
     "fields": fields
+  },function (err){
+           if(err) console.log(err);
   });
 };
 
