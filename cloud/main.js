@@ -1,4 +1,5 @@
 var dataHandler = require('./dataHandler.js');
+console.log(process.env);
 
 /* main.js
  * All calls here are publicly exposed as REST API endpoints.
