@@ -11,7 +11,7 @@
     "node": ">=0.6"
   },
   "dependencies" : {
-    "fh-nodeapp" : "*",
+    "fh-nodeapp-test" : "*",
     "async" : "*"
   }
 }
