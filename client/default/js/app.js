@@ -1,7 +1,9 @@
 var datasetId = 'myShoppingList';
 var datasetHash;
+var sync;
 
 $(document).ready(function() {
+  sync = $fh.sync;
 
   $("[rel='popover']").popover();
 

@@ -15,12 +15,27 @@ exports.doList = function(dataset_id, params, cb) {
       resJson[res.list[di].guid] = res.list[di].fields;
     }
 
-    return cb(null, resJson);
+    if( params && params.syncDelay && !isNaN(params.syncDelay) ) {
+      // Simulate a delay with list operation
+      setTimeout(function() {
+        return cb(null, resJson);
+      }, (params.syncDelay * 1000))
+    }
+    else {
+      return cb(null, resJson);
+    }
   });
 };
 
 exports.doCreate = function(dataset_id, data, cb) {
   console.log("doCreate : ", dataset_id, " :: ", data);
+
+  // Store the value for recordDelay if it exists
+  var recordDelay;
+  if( data && data.recordDelay && !isNaN(data.recordDelay) ) {
+    recordDelay = data.recordDelay;
+  }
+  delete data.recordDelay;
 
   $fh.db({
     "act": "create",
@@ -30,8 +45,17 @@ exports.doCreate = function(dataset_id, data, cb) {
     if (err) return cb(err);
 
     var data = {'uid': res.guid, 'data': res.fields};
-    return cb(null, data);
+
+    if( recordDelay) {
+      // Simulate a delay with create operation
+      setTimeout(function() {
+        return cb(null, data);
+      }, (recordDelay * 1000))
+    } else {
+      return cb(null, data);
+    }
   });
+
 };
 
 exports.doRead = function(dataset_id, uid, cb) {
@@ -39,17 +63,25 @@ exports.doRead = function(dataset_id, uid, cb) {
 
   $fh.db({
     "act": "read",
-    "type": dataset_id,
-    "guid": uid
+   "type": dataset_id,
+   "guid": uid
   }, function(err, res) {
-    if (err) return cb(err);
+   if (err) return cb(err);
 
     return cb (null, res.fields);
   });
+
 };
 
 exports.doUpdate = function(dataset_id, uid, data, cb) {
   console.log("doUpdate : ", dataset_id, " :: ", uid, " :: ", data);
+
+  // Store the value for recordDelay if it exists
+  var recordDelay;
+  if( data && data.recordDelay && !isNaN(data.recordDelay) ) {
+    recordDelay = data.recordDelay;
+  }
+  delete data.recordDelay;
 
   $fh.db({
     "act": "update",
@@ -59,8 +91,17 @@ exports.doUpdate = function(dataset_id, uid, data, cb) {
   }, function(err, res) {
     if (err) return cb(err);
 
-    return cb(null, res.fields);
+    if( recordDelay) {
+      // Simulate a delay with create operation
+      setTimeout(function() {
+        return cb(null, res.fields);
+      }, (recordDelay * 1000))
+    } else {
+      return cb(null, res.fields);
+    }
   });
+
+
 };
 
 exports.doDelete = function(dataset_id, uid, cb) {
@@ -92,7 +133,7 @@ exports.doCollision = function(dataset_id, hash, timestamp, uid, pre, post) {
     "type": dataset_id + '_collision',
     "fields": fields
   },function (err){
-           if(err) console.log(err);
+      if(err) console.log(err);
   });
 };
 

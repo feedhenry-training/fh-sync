@@ -8,6 +8,7 @@ h3 {
   font-weight: bold;
   text-shadow: 0 1px 0 rgba(255,255,255,0.5);
   color: #555;
+  line-height: 20px
 }
 
 h4 {
@@ -17,8 +18,27 @@ h4 {
   color: #777;
 }
 
+hr {
+  margin: 10px 0;
+}
+
+.light-well {
+    background-color: #ffffff;
+}
+.nav-tabs>li>a {
+  padding-top: 4px;
+  padding-bottom: 4px;
+}
 .controls {
   text-align: center !important;
+}
+
+.recordMod {
+  margin-top: 10px;
+}
+
+#itemUp, #recordDelay {
+  margin-left: 30px;
 }
 
 .discard_collision_button {
@@ -56,7 +76,8 @@ h4.center {
 }
 
 .well {
-  padding: 10px;
+  padding: 5px;
+  margin-bottom: 10px;
 }
 
 #wrapper {
@@ -75,11 +96,11 @@ h4.center {
 }
 
 .content-wrapper {
-  padding: 0 20px 20px 20px;
+  padding: 0 10px 10px 10px;
 }
 
 .tab-wrapper {
-  padding: 20px 20px 0 20px;
+  padding: 10px 10px 0 10px;
 }
 
 .box-header {
@@ -156,16 +177,9 @@ h4.center {
     background-color: #DDEE79;
 }
 
-#updateBtn {
-  margin-top: -9px;
-}
-
-#addBtn {
-  margin-top: -9px;
-}
-
-#addBtn, #updateBtn {
-  width: 75px;
+#addBtn, #updateBtn, #syncDelayBtn, #recordDelayBtn {
+  margin-top: -10px;
+    width: 75px;
 }
 
 .json-editor .item {

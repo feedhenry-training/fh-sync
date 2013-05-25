@@ -3,6 +3,7 @@ var syncUser = (function() {
   var self = {
 
     syncTable: undefined,
+    recordDelayVal: undefined,
 
     init: function() {
       // Ensure UI is set up correctly
@@ -11,13 +12,12 @@ var syncUser = (function() {
       $('#isOnlineChk').unbind().click(self.setOnline);
       $('#updateBtn').unbind().click(self.updateItem);
       $('#addBtn').unbind().click(self.addItem);
+      $('#syncDelayBtn').unbind().click(self.setSyncDelay);
+      $('#recordDelayBtn').unbind().click(self.setRecordDelay);
       $('#clearNotificationsBtn').unbind().click(self.clearNotifications);
 
-
-
-
       // Initialise the Sync Service. See XXXX for details on initialisation options
-      $fh.sync.init({
+      sync.init({
         "sync_frequency": 5,
         "auto_sync_local_updates": true,
         "notify_client_storage_failed": true,
@@ -25,16 +25,17 @@ var syncUser = (function() {
         "notify_sync_complete": true,
         "notify_offline_update": true,
         "notify_collision_detected": true,
-        "notify_update_failed": true,
+        "notify_remote_update_failed": true,
+        "notify_local_update_applied": true,
         "notify_update_applied": true,
         "notify_delta_received": true
       });
 
       // Provide handler function for receiving notifications from sync service - e.g. data changed
-      $fh.sync.notify(self.handleSyncNotifications);
+      sync.notify(self.handleSyncNotifications);
 
       // Get the Sync service to manage the dataset called "myShoppingList"
-      $fh.sync.manage(datasetId, {});
+      sync.manage(datasetId, {});
 
     },
 
@@ -48,8 +49,12 @@ var syncUser = (function() {
           // The dataset hash received in the uid parameter is different to the one we have stored.
           // This means that there has been a change in the dataset, so we should invoke the list operation.
           datasetHash = notification.uid;
-          $fh.sync.doList(datasetId, self.handleListSuccess, self.handleListFailure);
+          sync.doList(datasetId, self.handleListSuccess, self.handleListFailure);
         }
+      }
+      else if( 'local_update_applied' === notification.code ) {
+        // Reflect local updates in table immediately
+        sync.doList(datasetId, self.handleListSuccess, self.handleListFailure);
       }
     },
 
@@ -89,9 +94,10 @@ var syncUser = (function() {
       var created = new Date().getTime();
       var dataItem = {
         "name" : name,
-        "created" : created
+        "created" : created,
+        "recordDelay" : self.recordDelayVal
       };
-      $fh.sync.doCreate(datasetId, dataItem, function(res) {
+      sync.doCreate(datasetId, dataItem, function(res) {
         console.log('Create item success');
       }, function(code, msg) {
         alert('An error occured while creating data : (' + code + ') ' + msg);
@@ -112,13 +118,14 @@ var syncUser = (function() {
       $('#updateBtn').attr('disabled', 'disabled');
 
       // Read the full record from the sync service
-      $fh.sync.doRead(datasetId, uid, function(res) {
+      sync.doRead(datasetId, uid, function(res) {
         var data = res.data;
         // Update the name field with the updated value from the text box
         data.name = name;
+        data.recordDelay = self.recordDelayVal;
 
         // Send the update to the sync service
-        $fh.sync.doUpdate(datasetId, uid, data, function(res) {
+        sync.doUpdate(datasetId, uid, data, function(res) {
           console.log('Update item success');
         },
         function(code, msg) {
@@ -129,8 +136,19 @@ var syncUser = (function() {
       });
     },
 
+    setSyncDelay: function() {
+      var query_params = {
+        syncDelay : $('#syncDelay').val()
+      };
+
+      sync.manage(datasetId, {}, query_params);
+    },
+
+    setRecordDelay: function() {
+      self.recordDelayVal = $('#recordDelay').val();
+    },
+
     reloadTable: function(contents) {
-      console.log('reloadTable :: ', contents);
       if( contents.length == 0 ) {
         $('#nosyncdata').show();
         $('#table').hide();
@@ -169,7 +187,7 @@ var syncUser = (function() {
     },
 
     doEditRow: function(row) {
-      $fh.sync.doRead(datasetId, row[0], function(res) {
+      sync.doRead(datasetId, row[0], function(res) {
         console.log('read ', res);
         $('#itemUp').val(res.data.name);
         $('#itemUpId').val(row[0]);
@@ -181,10 +199,10 @@ var syncUser = (function() {
     },
 
     doDeleteRow: function(row) {
-      $fh.sync.doRead(datasetId, row[0], function(res) {
+      sync.doRead(datasetId, row[0], function(res) {
         var doDelete = confirm('Are you sure you wish to delete this row')
         if( doDelete ) {
-          $fh.sync.doDelete(datasetId, row[0], function(res) {
+          sync.doDelete(datasetId, row[0], function(res) {
             console.log('Delete item success');
           },
           function(code, msg) {

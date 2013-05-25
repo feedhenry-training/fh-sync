@@ -33,7 +33,7 @@
                 <p class="well">End user view for Data Sync. Add, update and delete items in the list & see them get syncronized across multiple instances of the app.</p>
 
                 <div id="nosyncdata">
-                  <span class="label label-info">You do not currently have any items in your shopping list. Add an item below.</span>
+                  <span class="label label-info">You do not currently have any items to sync. Add an item below.</span>
                 </div>
 
                 <div id="table">
@@ -41,19 +41,35 @@
                   <br/>
                 </div>
 
+
+
+                <div class="recordMod">
+                  <span id="adder">
+                    <input type="text" placeholder="Add New Item" class="input-xlarge" id="itemIn" name="itemIn" />
+                    <button id="addBtn" class="btn btn-primary" type="button">Add</button>
+                  </span>
+
+                  <span id="updater">
+                    <input type="text" placeholder="Select an Item from the list to update" class="input-xlarge" id="itemUp" name="itemUp" />
+                    <input type="hidden" id="itemUpId"/>
+                    <button id="updateBtn" class="btn btn-primary">Update</button>
+                  </span>
+                </div>
+
                 <hr/>
 
-                <div id="updater">
-                  <input type="text" placeholder="Select an Item from the list to update" class="input-xlarge" id="itemUp" name="itemUp" />
-                  <input type="hidden" id="itemUpId"/>
-                  <button id="updateBtn" class="btn btn-primary">Update</button>
-                </div>
+                <div id="sync-delays" class="well">
+                  <p class="well light-well">
+                    Sync Action Delays can be used for testing race conditions of sync actions from multiple clients <br/>
+                    Sync Delay - number of seconds to delay the sync list operation in the cloud <br/>
+                    Record Delay - number of seconds to delay record operation (create & update) in the cloud.<br/>
+                  </p>
 
-                <div id="adder">
-                  <input type="text" placeholder="Add New Item" class="input-xlarge" id="itemIn" name="itemIn" />
-                  <button id="addBtn" class="btn btn-primary" type="button">Add</button>
+                  <input type="text" placeholder="Sync Delay" class="input-xlarge" id="syncDelay" name="syncDelay" />
+                  <button id="syncDelayBtn" class="btn btn-primary">Set</button>
+                  <input type="text" placeholder="Record Delay" class="input-xlarge" id="recordDelay" name="recordDelay" />
+                  <button id="recordDelayBtn" class="btn btn-primary">Set</button>
                 </div>
-
 
                 <textarea id='notifications' rows=10 class="span12"></textarea>
                 <button id="clearNotificationsBtn" value="Clear" class="btn btn-inverse right">Clear</button>
@@ -124,6 +140,7 @@
       </div>
     </div>
   </div>
+  <script src="js/libs/sync-cli.js"></script>
   <script src="js/libs/jquery-1.9.0.js"></script>
   <script src="js/libs/bootstrap.js"></script>
   <script src="js/libs/jquery.dataTables.js"></script>

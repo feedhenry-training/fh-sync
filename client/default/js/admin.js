@@ -46,7 +46,7 @@ var syncAdmin = (function() {
     },
 
     showColissions: function(res) {
-      console.log('showCollisions : ', res);
+      //console.log('showCollisions : ', res);
 
       // Store the collision data for use later
       self.collisionRecord = res;
@@ -131,7 +131,7 @@ var syncAdmin = (function() {
       });
       console.log(recordUid);
       //Read the current version of the record
-      $fh.sync.doRead(datasetId, recordUid, function(record) {
+      sync.doRead(datasetId, recordUid, function(record) {
         var collisionRec = self.collisionRecord[collisionHash];
         self.activeCollision = {
           "pre" : collisionRec.pre,
@@ -243,7 +243,7 @@ var syncAdmin = (function() {
     },
 
     doDiscardCollision: function(collisionHash, hideEditor) {
-      $fh.sync.removeCollision(datasetId, collisionHash, function() {
+      sync.removeCollision(datasetId, collisionHash, function() {
         //Colission successfully removed. Hide colission editor and reload table
         if( hideEditor ) {
           $('#collisions_editor').hide();
@@ -256,7 +256,7 @@ var syncAdmin = (function() {
 
     doSaveCollision: function(collisionHash, recordUid) {
       console.log('currentRec = ', self.activeCollision.current);
-      $fh.sync.doUpdate(datasetId, recordUid, self.activeCollision.current, function(res) {
+      sync.doUpdate(datasetId, recordUid, self.activeCollision.current, function(res) {
         alert('Collision successfully resolved');
         self.doDiscardCollision(collisionHash, true);
       }, function(code, msg) {

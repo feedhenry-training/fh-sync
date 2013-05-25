@@ -11,7 +11,9 @@
     "node": ">=0.6"
   },
   "dependencies" : {
-    "fh-nodeapp" : "*",
-    "async" : "*"
+    "fh-nodeapp" : "0.58.0",
+    "async" : "*",
+    "winston" : "0.7.1",
+    "moment" : "2.0.0"
   }
 }
