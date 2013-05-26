@@ -364,7 +364,9 @@ $fh.sync = (function() {
             syncLoopParams.fn = 'sync';
             syncLoopParams.dataset_id = dataset_id;
             syncLoopParams.query_params = dataSet.query_params;
+            //var datasetHash = self.generateLocalDatasetHash(dataSet);
             syncLoopParams.dataset_hash = dataSet.hash;
+            syncLoopParams.acknowledgements = dataSet.acknowledgements || [];
 
             var pending = dataSet.pending;
             var pendingArray = [];
@@ -388,10 +390,11 @@ $fh.sync = (function() {
                 self.consoleLog("Back from Sync Loop : full Dataset = " + (res.records ? " Y" : "N"));
                 var rec;
 
-                function processUpdates(updates, notification) {
+                function processUpdates(updates, notification, acknowledgements) {
                   if( updates ) {
                     for (var up in updates) {
                       rec = updates[up];
+                      acknowledgements.push(rec);
                       if( dataSet.pending[up] && dataSet.pending[up].inFlight && !dataSet.pending[up].crashed ) {
                         delete dataSet.pending[up];
                         self.doNotify(dataset_id, rec.uid, notification, rec);
@@ -400,36 +403,37 @@ $fh.sync = (function() {
                   }
                 }
 
+                // Check to see if any new pending records need to be updated to reflect the current state of play.
+                self.updatePendingFromNewData(dataset_id, dataSet, res);
+
+                // Check to see if any previously crashed inflight records can now be resolved
+                self.updateCrashedInFlightFromNewData(dataset_id, dataSet, res);
+
                 if (res.records) {
                   // Full Dataset returned
-
-                  // Check to see if any new pending records need to be updated to reflect the current state of play.
-                  self.updatePendingFromNewData(dataset_id, dataSet, res);
-
-                  // Check to see if any previously crashed inflight records can now be resolved
-                  self.updateCrashedInFlightFromNewData(dataset_id, dataSet, res);
-
                   dataSet.data = res.records;
-
                   dataSet.hash = res.hash;
+
                   self.doNotify(dataset_id, res.hash, self.notifications.DELTA_RECEIVED, 'full dataset');
                   self.consoleLog("Full Dataset returned");
-                  self.syncComplete(dataset_id,  "online");
+                }
 
-                }
                 if (res.updates) {
-                  processUpdates(res.updates.applied, self.notifications.REMOTE_UPDATE_APPLIED);
-                  processUpdates(res.updates.failed, self.notifications.REMOTE_UPDATE_FAILED);
-                  processUpdates(res.updates.collisions, self.notifications.COLLISION_DETECTED);
+                  var acknowledgements = [];
+                  processUpdates(res.updates.applied, self.notifications.REMOTE_UPDATE_APPLIED, acknowledgements);
+                  processUpdates(res.updates.failed, self.notifications.REMOTE_UPDATE_FAILED, acknowledgements);
+                  processUpdates(res.updates.collisions, self.notifications.COLLISION_DETECTED, acknowledgements);
+                  dataSet.acknowledgements = acknowledgements;
                 }
+
                 else if (res.hash && res.hash !== dataSet.hash) {
                   self.consoleLog("Local dataset stale - syncing records :: local hash= " + dataSet.hash + " - remoteHash=" + res.hash);
                   // Different hash value returned - Sync individual records
                   self.syncRecords(dataset_id);
                 } else {
                   self.consoleLog("Local dataset up to date");
-                  self.syncComplete(dataset_id,  "online");
                 }
+                self.syncComplete(dataset_id,  "online");
               }, function(msg, err) {
                 // The AJAX call failed to complete succesfully, so the state of the current pending updates is unknown
                 // Mark them as "crashed". The next time a syncLoop completets successfully, we will review the crashed
@@ -706,7 +710,7 @@ $fh.sync = (function() {
 
       var pending = dataset.pending;
 
-      if( pending ) {
+      if( pending && newData.records) {
         for( var pendingHash in pending ) {
           if( pending.hasOwnProperty(pendingHash) ) {
             var pendingRec = pending[pendingHash];
@@ -772,6 +776,8 @@ $fh.sync = (function() {
       };
 
       var pending = dataset.pending;
+      var resolvedCrashes = {};
+
 
       if( pending ) {
         for( var pendingHash in pending ) {
@@ -779,10 +785,16 @@ $fh.sync = (function() {
             var pendingRec = pending[pendingHash];
 
             if( pendingRec.inFlight && pendingRec.crashed) {
+              self.consoleLog('Found crashed inFlight pending record uid=' + pendingRec.uid + ' :: hash=' + pendingRec.hash );
               if( newData && newData.updates && newData.updates.hashes) {
+
+                // Check if the updates received contain any info about the crashed in flight update
                 var crashedUpdate = newData.updates.hashes[pendingHash];
                 if( crashedUpdate ) {
-                  // We have found an update on one of our crashed records
+                  // We have found an update on one of our in flight crashed records
+
+                  resolvedCrashes[crashedUpdate.uid] = crashedUpdate;
+
                   self.consoleLog('Resolving status for crashed inflight pending record ' + JSON.stringify(crashedUpdate));
                   delete pending[pendingHash];
                   self.doNotify(dataset_id, crashedUpdate.uid, updateNotifications[crashedUpdate.type], crashedUpdate);
@@ -796,6 +808,16 @@ $fh.sync = (function() {
                   else {
                     pendingRec.crashedCount = 1;
                   }
+                }
+              }
+              else {
+                // No word on our crashed update - increment a counter to reflect another sync that did not give us
+                // any update on our crashed record.
+                if( pendingRec.crashedCount ) {
+                  pendingRec.crashedCount++;
+                }
+                else {
+                  pendingRec.crashedCount = 1;
                 }
               }
             }
@@ -820,6 +842,15 @@ $fh.sync = (function() {
                 }
               }
             }
+            else if (!pendingRec.inFlight && pendingRec.crashed ) {
+              console.log('Trying to resolve issues with crashed non in flight record - uid = ' + pendingRec.uid);
+              // Stalled pending record because a previous pending update on the same record crashed
+              var crashedRef = resolvedCrashes[pendingRec.uid];
+              if( crashedRef ) {
+                self.consoleLog('Found a stalled pending record backed up behind a resolved crash uid=' + pendingRec.uid + ' :: hash=' + pendingRec.hash);
+                pendingRec.crashed = false;
+              }
+            }
           }
         }
       }
@@ -832,13 +863,30 @@ $fh.sync = (function() {
       var pending = dataset.pending;
 
       if( pending ) {
+        var crashedRecords = {};
         for( var pendingHash in pending ) {
           if( pending.hasOwnProperty(pendingHash) ) {
             var pendingRec = pending[pendingHash];
 
             if( pendingRec.inFlight ) {
-              self.consoleLog('Marking inflight pending record as crashed : ' + pendingHash);
+              self.consoleLog('Marking in flight pending record as crashed : ' + pendingHash);
               pendingRec.crashed = true;
+              crashedRecords[pendingRec.uid] = pendingRec;
+            }
+          }
+        }
+
+        // Check for any pending updates that would be modifying a crashed record. These can not go out until the
+        // status of the crashed record is determined
+        for( var pendingHash in pending ) {
+          if( pending.hasOwnProperty(pendingHash) ) {
+            var pendingRec = pending[pendingHash];
+
+            if( ! pendingRec.inFlight ) {
+              var crashedRef = crashedRecords[pendingRec.uid];
+              if( crashedRef ) {
+                pendingRec.crashed = true;
+              }
             }
           }
         }

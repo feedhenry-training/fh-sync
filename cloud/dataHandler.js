@@ -37,26 +37,29 @@ exports.doCreate = function(dataset_id, data, cb) {
   }
   delete data.recordDelay;
 
-  $fh.db({
-    "act": "create",
-    "type": dataset_id,
-    "fields": data
-  }, function(err, res) {
-    if (err) return cb(err);
+  function createImpl() {
+    $fh.db({
+      "act": "create",
+      "type": dataset_id,
+      "fields": data
+    }, function(err, res) {
+      if (err) return cb(err);
 
-    var data = {'uid': res.guid, 'data': res.fields};
-
-    if( recordDelay) {
-      // Simulate a delay with create operation
-      setTimeout(function() {
-        console.log("Finished doCreate : ", data);
-        return cb(null, data);
-      }, (recordDelay * 1000))
-    } else {
+      var data = {'uid': res.guid, 'data': res.fields};
       console.log("Finished doCreate : ", data);
       return cb(null, data);
-    }
-  });
+    });
+  }
+
+  if( recordDelay) {
+    // Simulate a delay with create operation
+    setTimeout(function() {
+      createImpl();
+    }, (recordDelay * 1000));
+  }
+  else {
+    createImpl();
+  }
 
 };
 
@@ -85,24 +88,29 @@ exports.doUpdate = function(dataset_id, uid, data, cb) {
   }
   delete data.recordDelay;
 
-  $fh.db({
-    "act": "update",
-    "type": dataset_id,
-    "guid": uid,
-    "fields": data
-  }, function(err, res) {
-    if (err) return cb(err);
+  function updateImpl() {
+    $fh.db({
+      "act": "update",
+      "type": dataset_id,
+      "guid": uid,
+      "fields": data
+    }, function(err, res) {
+      if (err) return cb(err);
 
-    if( recordDelay) {
-      // Simulate a delay with create operation
-      setTimeout(function() {
-        return cb(null, res.fields);
-      }, (recordDelay * 1000))
-    } else {
+      console.log("Finished doUpdate : ", res);
       return cb(null, res.fields);
-    }
-  });
+    });
+  }
 
+  if( recordDelay) {
+    // Simulate a delay with create operation
+    setTimeout(function() {
+      updateImpl();
+    }, (recordDelay * 1000));
+  }
+  else {
+    updateImpl();
+  }
 
 };
 
@@ -162,7 +170,7 @@ exports.removeCollision = function(dataset_id, hash, cb) {
     "type": dataset_id + '_collision',
     "eq": {
       "hash": hash
-    },
+    }
   }, function(err, data) {
     if(err) cb(err);
     console.log('removeCollision : ', data)
