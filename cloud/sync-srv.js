@@ -214,7 +214,7 @@ function doClientSync(dataset_id, params, callback) {
 
         // Process Pending Params then re-sync data
         processPending(dataset_id, dataset, params, function() {
-          doLog(dataset_id, 'info', 'back from processPending', params);
+          doLog(dataset_id, 'verbose', 'back from processPending', params);
           // Changes have been submitted from client, redo the list operation on back end system,
           redoSyncList(dataset_id, params.query_params, function(err, res) {
             returnUpdates(dataset_id, params, res, callback);
@@ -386,7 +386,7 @@ function processPending(dataset_id, dataset, params, cb) {
 }
 
 function returnUpdates(dataset_id, params, resIn, cb) {
-  doLog(dataset_id, 'info', 'START returnUpdates', params);
+  doLog(dataset_id, 'verbose', 'START returnUpdates', params);
   doLog(dataset_id, 'silly', 'returnUpdates - existing res = ' + util.inspect(resIn), params);
   var cuid = getCuid(params);
   $fh.db({
@@ -414,7 +414,7 @@ function returnUpdates(dataset_id, params, resIn, cb) {
       }
       updates[rec.type][rec.hash] = rec;
 
-      doLog(dataset_id, 'verbose', 'returning update ' + util.inspect(rec));
+      doLog(dataset_id, 'verbose', 'returning update ' + util.inspect(rec), params);
     }
 
     if( ! resIn ) {
@@ -423,7 +423,9 @@ function returnUpdates(dataset_id, params, resIn, cb) {
     }
     resIn.updates = updates;
     doLog(dataset_id, 'silly', 'returnUpdates - final res = ' + util.inspect(resIn), params);
-    doLog(dataset_id, 'info', 'END returnUpdates', params);
+    if( res.list.length > 0 ) {
+      doLog(dataset_id, 'info', 'returnUpdates :: ' + util.inspect(updates.hashes), params);
+    }
     return cb(null, resIn);
   });
 }
@@ -437,8 +439,8 @@ function acknowledgeUpdates(dataset_id, params, cb) {
     doLog(dataset_id, 'verbose', 'acknowledgeUpdates :: err=' + err + ' :: update=' + util.inspect(update), params);
   }
 
-  if( updates ) {
-    doLog(dataset_id, 'info', 'START acknowledgeUpdates - count=' + updates.length, params);
+  if( updates && updates.length > 0) {
+    doLog(dataset_id, 'info', 'acknowledgeUpdates :: ' + util.inspect(updates), params);
 
     async.forEachSeries(updates, function(update, itemCallback) {
       doLog(dataset_id, 'verbose', 'acknowledgeUpdates :: processing update ' + util.inspect(update), params);
@@ -471,7 +473,9 @@ function acknowledgeUpdates(dataset_id, params, cb) {
       });
     },
     function(err) {
-      doLog(dataset_id, 'info', 'END acknowledgeUpdates - err=' + err, params);
+      if( err ) {
+        doLog(dataset_id, 'info', 'END acknowledgeUpdates - err=' + err, params);
+      }
       cb(err);
     });
   }
@@ -594,7 +598,7 @@ function doSyncRecords(dataset_id, params, callback) {
 
         if( clientRecs[serverRecUid] ) {
           if( clientRecs[serverRecUid] !== serverRecHash ) {
-            doLog(dataset_id, 'info', '"Updating client record ' + serverRecUid + " client hash=" + clientRecs[serverRecUid], params);
+            doLog(dataset_id, 'info', 'Updating client record ' + serverRecUid + ' client hash=' + clientRecs[serverRecUid], params);
             updates[serverRecUid] = serverRec;
           }
         } else {
@@ -755,7 +759,7 @@ var deleted_datasets = {};
 // CONFIG
 var defaults = {
   "sync_frequency": 10,
-  "logLevel" : "verbose"
+  "logLevel" : "info"
 };
 
 // Functions which can be invoked through sync.doInvoke
