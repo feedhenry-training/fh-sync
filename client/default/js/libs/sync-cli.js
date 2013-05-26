@@ -792,7 +792,7 @@ $fh.sync = (function() {
             var pendingRec = pending[pendingHash];
 
             if( pendingRec.inFlight ) {
-              var updateReceivedForPending = (newData && newData.updates &&  newData.updates.applied && newData.updates.applied[pendingHash]) ? true : false;
+              var updateReceivedForPending = (newData && newData.updates &&  newData.updates.hashes && newData.updates.hashes[pendingHash]) ? true : false;
 
               self.consoleLog('updateNewDataFromInFlight - Found inflight pending Record - action = ' + pendingRec.action + ' :: hash = ' + pendingHash + ' :: updateReceivedForPending=' + updateReceivedForPending);
 
