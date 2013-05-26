@@ -28,7 +28,7 @@ exports.doList = function(dataset_id, params, cb) {
 };
 
 exports.doCreate = function(dataset_id, data, cb) {
-  console.log("doCreate : ", dataset_id, " :: ", data);
+  console.log("Starting doCreate : ", dataset_id, " :: ", data);
 
   // Store the value for recordDelay if it exists
   var recordDelay;
@@ -49,9 +49,11 @@ exports.doCreate = function(dataset_id, data, cb) {
     if( recordDelay) {
       // Simulate a delay with create operation
       setTimeout(function() {
+        console.log("Finished doCreate : ", data);
         return cb(null, data);
       }, (recordDelay * 1000))
     } else {
+      console.log("Finished doCreate : ", data);
       return cb(null, data);
     }
   });

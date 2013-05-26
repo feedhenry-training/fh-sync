@@ -257,9 +257,12 @@ function doClientSync(dataset_id, params, callback) {
 function processPending(dataset_id, dataset, params, cb) {
   var pending = params.pending;
 
-  var applied = {};
-  var failed = {};
-  var collisions = {};
+  var updates = {
+    applied : {},
+    failed : {},
+    collisions : {},
+    hashes : {}
+  };
 
   var itemCallback = function() {
     doLog(dataset_id, 'verbose', 'itemCallback :: arguments = ' + util.inspect(arguments), params);
@@ -276,16 +279,31 @@ function processPending(dataset_id, dataset, params, cb) {
       var hash = pendingObj.hash;
       var timestamp = pendingObj.timestamp;
 
+      function addUpdate(type, action, hash, uid) {
+        var update = {
+          type: type,
+          action: action,
+          hash: hash,
+          uid : uid
+
+        }
+        updates[type][hash] = update;
+        updates.hashes[hash] = update;
+      }
+
       if( "create" === action ) {
         doLog(dataset_id, 'info', 'CREATE Start', params);
         dataset.createHandler(dataset_id, post, function(err, data) {
           if( err ) {
             doLog(dataset_id, 'warn', 'CREATE Failed - uid=' + uid + ' : err = ' + err, params);
-            failed[hash] = {action:"create", "uid":uid, "msg": err};
+            //failed[hash] = {action:"create", "uid":uid, "msg": err};
+            addUpdate("failed", "create", hash, uid);
             return itemCallback();
           }
           doLog(dataset_id, 'info', 'CREATE Success - uid=' + data.uid + ' : hash = ' + hash, params);
-          applied[hash]  = {action:"create", "uid":data.uid};
+          //applied[hash]  = {action:"create", "uid":data.uid};
+          addUpdate("applied", "create", hash, data.uid);
+
           itemCallback();
         });
       }
@@ -294,7 +312,8 @@ function processPending(dataset_id, dataset, params, cb) {
         dataset.readHandler(dataset_id, uid, function(err, data) {
           if( err ) {
             doLog(dataset_id, 'warn', 'READ for UPDATE Failed - uid=' + uid + ' : err = ' + err, params);
-            failed[hash] = {action:"update", "uid":uid, "msg": err};
+            //failed[hash] = {action:"update", "uid":uid, "msg": err};
+            addUpdate("failed", "update", hash, uid);
             return itemCallback();
           }
           doLog(dataset_id, 'info', ' READ for UPDATE Success', params);
@@ -309,11 +328,13 @@ function processPending(dataset_id, dataset, params, cb) {
             dataset.updateHandler(dataset_id, uid, post, function(err, data) {
               if( err ) {
                 doLog(dataset_id, 'warn', 'UPDATE Failed - uid=' + uid + ' : err = ' + err, params);
-                failed[hash] = {action:"update", "uid":uid, "msg": err};
+                //failed[hash] = {action:"update", "uid":uid, "msg": err};
+                addUpdate("failed", "update", hash, uid);
                 return itemCallback();
               }
               doLog(dataset_id, 'info', 'UPDATE Success - uid=' + uid + ' : hash = ' + hash, params);
-              applied[hash]  = {action:"update", "uid":uid};
+              //applied[hash]  = {action:"update", "uid":uid};
+              addUpdate("applied", "update", hash, uid);
               return itemCallback();
             });
           } else {
@@ -321,13 +342,15 @@ function processPending(dataset_id, dataset, params, cb) {
             if( posthash = dataHash ) {
               // Update has already been applied
               doLog(dataset_id, 'info', 'UPDATE Already Applied - uid=' + uid + ' : hash = ' + hash, params);
-              applied[hash]  = {action:"update", "uid":uid};
+              //applied[hash]  = {action:"update", "uid":uid};
+              addUpdate("applied", "update", hash, uid);
               itemCallback();
             }
             else {
               doLog(dataset_id, 'warn', 'UPDATE COLLISION \n Pre record from client:\n' + util.inspect(sortObject(pre)) + '\n Current record from data store:\n' + util.inspect(sortObject(data)), params);
               dataset.collisionHandler(dataset_id, hash, timestamp, uid, pre, post);
-              collisions[hash]  = {action:"update", "uid":uid};
+              //collisions[hash]  = {action:"update", "uid":uid};
+              addUpdate("collisions", "update", hash, uid);
               return itemCallback();
             }
           }
@@ -338,7 +361,8 @@ function processPending(dataset_id, dataset, params, cb) {
         dataset.readHandler(dataset_id, uid, function(err, data) {
           if( err ) {
             doLog(dataset_id, 'warn', 'READ for DELETE Failed - uid=' + uid + ' : err = ' + err, params);
-            failed[hash] = {action:"delete", "uid":uid, "msg": err};
+            //failed[hash] = {action:"delete", "uid":uid, "msg": err};
+            addUpdate("failed", "delete", hash, uid);
             return itemCallback();
           }
           doLog(dataset_id, 'info', ' READ for DELETE Success', params);
@@ -352,7 +376,8 @@ function processPending(dataset_id, dataset, params, cb) {
           if( dataHash == null ) {
             //record has already been deleted
             doLog(dataset_id, 'info', 'DELETE Already performed - uid=' + uid + ' : hash = ' + hash, params);
-            applied[hash]  = {action:"delete", uid:uid};
+            //applied[hash]  = {action:"delete", uid:uid};
+            addUpdate("applied", "delete", hash, uid);
             itemCallback();
           }
           else {
@@ -360,17 +385,20 @@ function processPending(dataset_id, dataset, params, cb) {
               dataset.deleteHandler(dataset_id, uid, function(err, data) {
                 if( err ) {
                   doLog(dataset_id, 'warn', 'DELETE Failed - uid=' + uid + ' : err = ' + err, params);
-                  failed[hash] = {action:"delete", "uid":uid, "msg": err};
+                  //failed[hash] = {action:"delete", "uid":uid, "msg": err};
+                  addUpdate("failed", "delete", hash, uid);
                   return itemCallback();
                 }
                 doLog(dataset_id, 'info', 'DELETE Success - uid=' + uid + ' : hash = ' + hash, params);
-                applied[hash]  = {action:"delete", "uid":uid};
+                //applied[hash]  = {action:"delete", "uid":uid};
+                addUpdate("applied", "delete", hash, uid);
                 itemCallback();
               });
             } else {
               doLog(dataset_id, 'warn', 'DELETE COLLISION \n Pre record from client:\n' + util.inspect(sortObject(pre)) + '\n Current record from data store:\n' + util.inspect(sortObject(data)), params);
               dataset.collisionHandler(dataset_id, hash, timestamp, uid, pre, post);
-              collisions[hash]  = {action:"delete", "uid":uid};
+              //collisions[hash]  = {action:"delete", "uid":uid};
+              addUpdate("collisions", "delete", hash, uid);
               itemCallback();
             }
           }
@@ -383,11 +411,7 @@ function processPending(dataset_id, dataset, params, cb) {
     },
     function(err) {
       //console.log("processPending :: async callback - err " + err);
-      return cb({
-        "applied": applied,
-        "failed": failed,
-        "collisions": collisions
-      });
+      return cb(updates);
     });
 }
 
