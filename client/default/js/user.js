@@ -98,7 +98,7 @@ var syncUser = (function() {
         "recordDelay" : self.recordDelayVal
       };
       sync.doCreate(datasetId, dataItem, function(res) {
-        console.log('Create item success');
+        //console.log('Create item success');
       }, function(code, msg) {
         alert('An error occured while creating data : (' + code + ') ' + msg);
       });
@@ -126,7 +126,7 @@ var syncUser = (function() {
 
         // Send the update to the sync service
         sync.doUpdate(datasetId, uid, data, function(res) {
-          console.log('Update item success');
+          //console.log('Update item success');
         },
         function(code, msg) {
           alert('Unable to update row : (' + code + ') ' + msg);
@@ -203,7 +203,7 @@ var syncUser = (function() {
         var doDelete = confirm('Are you sure you wish to delete this row')
         if( doDelete ) {
           sync.doDelete(datasetId, row[0], function(res) {
-            console.log('Delete item success');
+            //console.log('Delete item success');
           },
           function(code, msg) {
             alert('Unable to delete row : (' + code + ') ' + msg);
