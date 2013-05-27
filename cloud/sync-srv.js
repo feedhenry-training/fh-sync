@@ -233,7 +233,7 @@ function doClientSync(dataset_id, params, callback) {
             returnUpdates(dataset_id, params, res, callback);
           }
           else {
-            doLog(dataset_id, 'verbose', 'doClientSync - No pending - Hashes NO NOT match - return full dataset');
+            doLog(dataset_id, 'info', 'doClientSync - No pending - Hashes NO NOT match (Client :: Cloud) = ' + params.dataset_hash + ' :: ' + dataset.syncLists[queryHash].hash + ' - return full dataset', params);
             var res = dataset.syncLists[queryHash];
             returnUpdates(dataset_id, params, res, callback);
           }

@@ -1,5 +1,4 @@
 $fh = $fh || {};
-console.log('HERE');
 $fh.sync = (function() {
 
   var self = {
@@ -1015,6 +1014,6 @@ $fh.sync = (function() {
     removeCollision: self.removeCollision,
     getPending : self.getPending,
     clearPending : self.clearPending,
-    getDataset : self.getdataset
+    getDataset : self.getDataSet
   };
 })();
