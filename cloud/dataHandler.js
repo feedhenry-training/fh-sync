@@ -38,6 +38,11 @@ exports.doCreate = function(dataset_id, data, cb) {
   delete data.recordDelay;
 
   function createImpl() {
+    var dataStr = JSON.stringify(data);
+    if( dataStr.indexOf("FAILURE") >= 0) {
+      return cb('Create Failure');
+    }
+
     $fh.db({
       "act": "create",
       "type": dataset_id,
@@ -89,6 +94,11 @@ exports.doUpdate = function(dataset_id, uid, data, cb) {
   delete data.recordDelay;
 
   function updateImpl() {
+    var dataStr = JSON.stringify(data);
+    if( dataStr.indexOf("FAILURE") >= 0) {
+      return cb(new Error("You asked for failure - you got failure"));
+    }
+
     $fh.db({
       "act": "update",
       "type": dataset_id,

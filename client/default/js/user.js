@@ -44,17 +44,19 @@ var syncUser = (function() {
       $('#notifications').val(msg + $('#notifications').val());
 
       if( 'sync_complete' == notification.code ) {
-        // We are interested in sync_complete notifications as there may be changes to the dataset
-        if( datasetHash != notification.uid ) {
-          // The dataset hash received in the uid parameter is different to the one we have stored.
-          // This means that there has been a change in the dataset, so we should invoke the list operation.
-          datasetHash = notification.uid;
-          sync.doList(datasetId, self.handleListSuccess, self.handleListFailure);
-        }
+        datasetHash = notification.uid;
+        sync.doList(datasetId, self.handleListSuccess, self.handleListFailure);
       }
       else if( 'local_update_applied' === notification.code ) {
         // Reflect local updates in table immediately
         sync.doList(datasetId, self.handleListSuccess, self.handleListFailure);
+      }
+      else if( 'remote_update_failed' === notification.code ) {
+        var errorMsg = notification.message ? notification.message.msg ? notification.message.msg : undefined : undefined;
+        var action = notification.message ? notification.message.action ? notification.message.action : 'action' : 'action';
+        var errorStr = 'The following error was returned from the data store: ' + errorMsg;
+
+        alert('Unable to perform ' + action +  ' on record ' + notification.uid + '. ' + errorStr);
       }
     },
 
