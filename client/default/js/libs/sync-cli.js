@@ -9,27 +9,27 @@ $fh.sync = (function() {
       // How often to synchronise data with the cloud in seconds.
       "auto_sync_local_updates": true,
       // Should local chages be syned to the cloud immediately, or should they wait for the next sync interval
-      "notify_client_storage_failed": false,
+      "notify_client_storage_failed": true,
       // Should a notification event be triggered when loading/saving to client storage fails
-      "notify_sync_started": false,
+      "notify_sync_started": true,
       // Should a notification event be triggered when a sync cycle with the server has been started
       "notify_sync_complete": true,
       // Should a notification event be triggered when a sync cycle with the server has been completed
-      "notify_offline_update": false,
+      "notify_offline_update": true,
       // Should a notification event be triggered when an attempt was made to update a record while offline
-      "notify_collision_detected": false,
+      "notify_collision_detected": true,
       // Should a notification event be triggered when an update failed due to data collision
-      "notify_remote_update_failed": false,
+      "notify_remote_update_failed": true,
       // Should a notification event be triggered when an update failed for a reason other than data collision
-      "notify_local_update_applied": false,
+      "notify_local_update_applied": true,
       // Should a notification event be triggered when an update was applied to the local data store
-      "notify_remote_update_applied": false,
+      "notify_remote_update_applied": true,
       // Should a notification event be triggered when an update was applied to the remote data store
-      "notify_delta_received": false,
+      "notify_delta_received": true,
       // Should a notification event be triggered when a delta was received from the remote data store (dataset or record - depending on whether uid is set)
-      "notify_sync_failed": false,
+      "notify_sync_failed": true,
       // Should a notification event be triggered when the sync loop failed to complete
-      "do_console_log": true,
+      "do_console_log": false,
       // Should log statements be written to console.log
       "crashed_count_wait" : 10,
       // How many syncs should we check for updates on crashed in flight updates before we give up searching
@@ -69,7 +69,7 @@ $fh.sync = (function() {
 
     // PUBLIC FUNCTION IMPLEMENTATIONS
     init: function(options) {
-      console.log('sync - init called');
+      self.consoleLog('sync - init called');
       self.config = JSON.parse(JSON.stringify(self.defaults));
       for (var i in options) {
         self.config[i] = options[i];
@@ -169,24 +169,22 @@ $fh.sync = (function() {
       self.addPendingObj(dataset_id, uid, null, "delete", success, failure);
     },
 
-    getPending: function(dataset_id) {
-      console.log('getPending');
+    getPending: function(dataset_id, cb) {
       self.getDataSet(dataset_id, function(dataset) {
         var res;
         if( dataset ) {
           res = dataset.pending;
         }
-        console.log(JSON.stringify(res, null, 2));
-        return res;
+        cb(res);
       }, function(err, datatset_id) {
-          console.log(err);
+          self.ConsoleLog(err);
       });
     },
 
-    clearPending: function(dataset_id) {
+    clearPending: function(dataset_id, cb) {
       self.getDataSet(dataset_id, function(dataset) {
         dataset.pending = {};
-        self.saveDataSet(dataset_id);
+        self.saveDataSet(dataset_id, cb);
       });
     },
 
@@ -286,7 +284,6 @@ $fh.sync = (function() {
         str = JSON.stringify(self.sortObject(obj));
       } catch (e) {
         console.error('Error stringifying sorted object:' + e);
-        throw e;
       }
 
       return str;
@@ -453,7 +450,7 @@ $fh.sync = (function() {
               });
             }
             catch (e) {
-              console.log('Error performing sync - ', e);
+              self.consoleLog('Error performing sync - ' + e);
               self.syncComplete(dataset_id, e);
             }
           }
@@ -542,16 +539,13 @@ $fh.sync = (function() {
             var lastSyncStart = dataset.syncLoopStart;
             var lastSyncCmp = dataset.syncLoopEnd;
             if( lastSyncStart == null ) {
-              console.log(dataset_id +' - Performing initial sync');
+              self.consoleLog(dataset_id +' - Performing initial sync');
               // Dataset has never been synced before - do initial sync
               dataset.syncPending = true;
             } else if (lastSyncCmp != null) {
               var timeSinceLastSync = new Date().getTime() - lastSyncCmp;
               var syncFrequency = dataset.config.sync_frequency * 1000;
-              //console.log(dataset_id + ' - timeSinceLastSync = ' + timeSinceLastSync);
-              //console.log(dataset_id + ' - syncFrequency = ' + syncFrequency);
               if( timeSinceLastSync > syncFrequency ) {
-                //console.log(dataset_id + ' - Sync Loop time expired, starting new sync');
                 // Time between sync loops has passed - do another sync
                 dataset.syncPending = true;
               }
@@ -569,14 +563,15 @@ $fh.sync = (function() {
     },
 
     datasetMonitor: function() {
+      self.checkDatasets();
+
       // Re-execute datasetMonitor every 500ms so we keep invoking checkDatasets();
       setTimeout(function() {
         self.datasetMonitor();
       }, 500);
-      self.checkDatasets();
     },
 
-    saveDataSet: function (dataset_id) {
+    saveDataSet: function (dataset_id, cb) {
       var onFail =  function(msg, err) {
         // save failed
         var errMsg = 'save to local storage failed  msg:' + msg + ' err:' + err;
@@ -588,6 +583,9 @@ $fh.sync = (function() {
         Lawnchair({fail:onFail}, function (){
              this.save({key:"dataset_" + dataset_id,val:JSON.stringify(dataset)}, function(){
                //save success
+               if( cb ) {
+                 cb();
+               }
              });
         });
       });
@@ -893,6 +891,22 @@ $fh.sync = (function() {
                   resolvedCrashes[crashedUpdate.uid] = crashedUpdate;
 
                   self.consoleLog('updateCrashedInFlightFromNewData - Resolving status for crashed inflight pending record ' + JSON.stringify(crashedUpdate));
+
+                  if( crashedUpdate.type === 'failed' ) {
+                    // Crashed update failed - revert local dataset
+                    if( crashedUpdate.action === 'create' ) {
+                      self.consoleLog('updateCrashedInFlightFromNewData - Deleting failed create from dataset');
+                      delete dataset.data[crashedUpdate.uid];
+                    }
+                    else if ( crashedUpdate.action === 'update' || crashedUpdate.action === 'delete' ) {
+                      self.consoleLog('updateCrashedInFlightFromNewData - Reverting failed ' + crashedUpdate.action + ' in dataset');
+                      dataset.data[crashedUpdate.uid] = {
+                        data : pendingRec.pre,
+                        hash : pendingRec.preHash
+                      };
+                    }
+                  }
+
                   delete pending[pendingHash];
                   self.doNotify(dataset_id, crashedUpdate.uid, updateNotifications[crashedUpdate.type], crashedUpdate);
                 }
@@ -940,7 +954,7 @@ $fh.sync = (function() {
               }
             }
             else if (!pendingRec.inFlight && pendingRec.crashed ) {
-              console.log('updateCrashedInFlightFromNewData - Trying to resolve issues with crashed non in flight record - uid = ' + pendingRec.uid);
+              self.consoleLog('updateCrashedInFlightFromNewData - Trying to resolve issues with crashed non in flight record - uid = ' + pendingRec.uid);
               // Stalled pending record because a previous pending update on the same record crashed
               var crashedRef = resolvedCrashes[pendingRec.uid];
               if( crashedRef ) {

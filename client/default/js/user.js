@@ -16,19 +16,10 @@ var syncUser = (function() {
       $('#recordDelayBtn').unbind().click(self.setRecordDelay);
       $('#clearNotificationsBtn').unbind().click(self.clearNotifications);
 
-      // Initialise the Sync Service. See XXXX for details on initialisation options
+      // Initialise the Sync Service. See http://docs.feedhenry.com/v2/api_js_client_api.html#$fh.sync for details on initialisation options
       sync.init({
         "sync_frequency": 5,
-        "auto_sync_local_updates": true,
-        "notify_client_storage_failed": true,
-        "notify_sync_started": true,
-        "notify_sync_complete": true,
-        "notify_offline_update": true,
-        "notify_collision_detected": true,
-        "notify_remote_update_failed": true,
-        "notify_local_update_applied": true,
-        "notify_update_applied": true,
-        "notify_delta_received": true
+        "do_console_log" : true
       });
 
       // Provide handler function for receiving notifications from sync service - e.g. data changed
