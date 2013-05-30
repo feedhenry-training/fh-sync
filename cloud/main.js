@@ -1,7 +1,6 @@
 var dataHandler = require('./dataHandler.js');
 
-//var sync = $fh.sync;
-var sync = require('./sync-srv');
+var sync = $fh.sync;
 
 /* main.js
  * All calls here are publicly exposed as REST API endpoints.
