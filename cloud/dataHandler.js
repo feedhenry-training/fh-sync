@@ -15,11 +15,11 @@ exports.doList = function(dataset_id, params, cb, meta_data) {
       resJson[res.list[di].guid] = res.list[di].fields;
     }
 
-    if( params && params.syncDelay && !isNaN(params.syncDelay) ) {
+    if( meta_data && meta_data.syncDelay && !isNaN(meta_data.syncDelay) ) {
       // Simulate a delay with list operation
       setTimeout(function() {
         return cb(null, resJson);
-      }, (params.syncDelay * 1000))
+      }, (meta_data.syncDelay * 1000))
     }
     else {
       return cb(null, resJson);
@@ -30,12 +30,10 @@ exports.doList = function(dataset_id, params, cb, meta_data) {
 exports.doCreate = function(dataset_id, data, cb, meta_data) {
   console.log("Starting doCreate : ", dataset_id, " :: ", data, ' :: meta=', meta_data);
 
-  // Store the value for recordDelay if it exists
   var recordDelay;
-  if( data && data.recordDelay && !isNaN(data.recordDelay) ) {
-    recordDelay = data.recordDelay;
+  if( meta_data && meta_data.recordDelay && !isNaN(meta_data.recordDelay) ) {
+    recordDelay = meta_data.recordDelay;
   }
-  delete data.recordDelay;
 
   function createImpl() {
     var dataStr = JSON.stringify(data);
@@ -86,12 +84,10 @@ exports.doRead = function(dataset_id, uid, cb, meta_data) {
 exports.doUpdate = function(dataset_id, uid, data, cb, meta_data) {
   console.log("doUpdate : ", dataset_id, " :: ", uid, " :: ", data, ' :: meta=', meta_data);
 
-  // Store the value for recordDelay if it exists
   var recordDelay;
-  if( data && data.recordDelay && !isNaN(data.recordDelay) ) {
-    recordDelay = data.recordDelay;
+  if( meta_data && meta_data.recordDelay && !isNaN(meta_data.recordDelay) ) {
+    recordDelay = meta_data.recordDelay;
   }
-  delete data.recordDelay;
 
   function updateImpl() {
     var dataStr = JSON.stringify(data);
@@ -127,15 +123,32 @@ exports.doUpdate = function(dataset_id, uid, data, cb, meta_data) {
 exports.doDelete = function(dataset_id, uid, cb, meta_data) {
   console.log("doDelete : ", dataset_id, " :: ", uid, ' :: meta=', meta_data);
 
-  $fh.db({
-    "act": "delete",
-    "type": dataset_id,
-    "guid": uid
-  }, function(err, res) {
-    if (err) return cb(err);
+  var recordDelay;
+  if( meta_data && meta_data.recordDelay && !isNaN(meta_data.recordDelay) ) {
+    recordDelay = meta_data.recordDelay;
+  }
 
-    return cb(null, res.fields);
-  });
+  function deleteImpl() {
+    $fh.db({
+      "act": "delete",
+      "type": dataset_id,
+      "guid": uid
+    }, function(err, res) {
+      if (err) return cb(err);
+
+      return cb(null, res.fields);
+    });
+  }
+
+  if( recordDelay) {
+    // Simulate a delay with create operation
+    setTimeout(function() {
+      deleteImpl();
+    }, (recordDelay * 1000));
+  }
+  else {
+    deleteImpl();
+  }
 };
 
 exports.doCollision = function(dataset_id, hash, timestamp, uid, pre, post, meta_data) {

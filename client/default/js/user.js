@@ -3,7 +3,6 @@ var syncUser = (function() {
   var self = {
 
     syncTable: undefined,
-    recordDelayVal: undefined,
 
     init: function() {
       // Ensure UI is set up correctly
@@ -28,7 +27,28 @@ var syncUser = (function() {
       sync.notify(self.handleSyncNotifications);
 
       // Get the Sync service to manage the dataset called "myShoppingList"
-      sync.manage(datasetId, {});
+      sync.manage(datasetId, null, null, null, function() {
+        console.log('Data set managed - getting query params and meta data');
+        sync.getMetaData(datasetId, function(meta_data) {
+
+          var localMetaData = JSON.parse(JSON.stringify(meta_data));
+          if( localMetaData.syncDelay ) {
+           $('#syncDelay').val(localMetaData.syncDelay);
+           delete localMetaData.syncDelay;
+          }
+
+          if( localMetaData.recordDelay ) {
+            $('#recordDelay').val(localMetaData.recordDelay);
+            delete localMetaData.recordDelay;
+          }
+
+          $('#metaData').val(JSON.stringify(localMetaData));
+        });
+        sync.getQueryParams(datasetId, function(query_params) {
+
+          $('#queryParams').val(JSON.stringify(query_params));
+        });
+      } );
 
     },
 
@@ -89,8 +109,7 @@ var syncUser = (function() {
       var created = new Date().getTime();
       var dataItem = {
         "name" : name,
-        "created" : created,
-        "recordDelay" : self.recordDelayVal
+        "created" : created
       };
       sync.doCreate(datasetId, dataItem, function(res) {
         //console.log('Create item success');
@@ -117,7 +136,6 @@ var syncUser = (function() {
         var data = res.data;
         // Update the name field with the updated value from the text box
         data.name = name;
-        data.recordDelay = self.recordDelayVal;
 
         // Send the update to the sync service
         sync.doUpdate(datasetId, uid, data, function(res) {
@@ -132,7 +150,11 @@ var syncUser = (function() {
     },
 
     setSyncDelay: function() {
-      self.setQueryParams();
+      self.setMetaData();
+    },
+
+    setRecordDelay: function() {
+      self.setMetaData();
     },
 
     setQueryParams: function() {
@@ -146,6 +168,8 @@ var syncUser = (function() {
 
       // Store the sync delay as a query param
       queryParamsJson.syncDelay = $('#syncDelay').val();
+      queryParamsJson.recordDelay = $('#recordDelay').val();
+
 
       sync.setQueryParams(datasetId, queryParamsJson);
     },
@@ -159,12 +183,13 @@ var syncUser = (function() {
         return;
       }
 
+      // Add the Sync Delay and record delay to the meta data.
+      metaDataJson.syncDelay = $('#syncDelay').val();
+      metaDataJson.recordDelay = $('#recordDelay').val();
+
       sync.setMetaData(datasetId, metaDataJson);
     },
 
-    setRecordDelay: function() {
-      self.recordDelayVal = $('#recordDelay').val();
-    },
 
     reloadTable: function(contents) {
       if( contents.length == 0 ) {

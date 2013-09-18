@@ -226,14 +226,18 @@ function doClientSync(dataset_id, params, callback) {
         processPending(dataset_id, dataset, params, function() {
           doLog(dataset_id, 'verbose', 'back from processPending', params);
           // Changes have been submitted from client, redo the list operation on back end system,
-          redoSyncList(dataset_id, params.query_params, function(err, res) {
+          redoSyncList(dataset_id, params.query_params, params.meta_data, function(err, res) {
             returnUpdates(dataset_id, params, res, callback);
           });
         });
       }
       else {
         // No pending updates, just sync client dataset
-        var queryHash = generateHash(params.query_params);
+        var queryParamsHash = generateHash(params.query_params);
+        var metaDataHash = generateHash(params.meta_data);
+
+        var queryHash = queryParamsHash + '-' + metaDataHash;
+
         if( dataset.syncLists[queryHash] ) {
           doLog(dataset_id, 'verbose', 'doClientSync - No pending - Hash (Client :: Cloud) = ' + params.dataset_hash + ' :: ' + dataset.syncLists[queryHash].hash, params);
 
@@ -249,7 +253,7 @@ function doClientSync(dataset_id, params, callback) {
           }
         } else {
           doLog(dataset_id, 'verbose', 'No pending records. No cloud data set - invoking list on back end system', params);
-          redoSyncList(dataset_id, params.query_params, function(err, res) {
+          redoSyncList(dataset_id, params.query_params, params.meta_data, function(err, res) {
             if( err ) callback(err);
             returnUpdates(dataset_id, params, res, callback);
           });
@@ -496,23 +500,27 @@ function acknowledgeUpdates(dataset_id, params, cb) {
   }
 }
 
-function redoSyncList(dataset_id, query_params, cb) {
+function redoSyncList(dataset_id, query_params, meta_data, cb) {
   getDataset(dataset_id, function(err, dataset) {
     if( err ) {
       return cb(err, null);
     }
     // Clear any existing timeouts so sync does not run multiple times
-    var queryHash = generateHash(query_params);
+    var queryParamsHash = generateHash(query_params);
+    var metaDataHash = generateHash(meta_data);
+
+    var queryHash = queryParamsHash + '-' + metaDataHash;
+
     if( dataset && dataset.timeouts && dataset.timeouts[queryHash]) {
       doLog(dataset_id, 'info', 'redoSyncList :: Clearing timeout for dataset sync loop - queryParams : ' + util.inspect(query_params));
       clearTimeout(dataset.timeouts[queryHash]);
     }
     // Invoke the sync List;
-    doSyncList(dataset_id, query_params, cb);
+    doSyncList(dataset_id, query_params, meta_data, cb);
   });
 }
 
-function doSyncList(dataset_id, query_params, cb) {
+function doSyncList(dataset_id, query_params, meta_data, cb) {
   getDataset(dataset_id, function(err, dataset) {
     if( err ) {
       // doSyncList is recursively called with no callback. This means we must
@@ -551,19 +559,22 @@ function doSyncList(dataset_id, query_params, cb) {
       }
       var globalHash = generateHash(hashes);
 
-      var queryHash = generateHash(query_params);
+      var queryParamsHash = generateHash(query_params);
+      var metaDataHash = generateHash(meta_data);
+
+      var queryHash = queryParamsHash + '-' + metaDataHash;
 
       var previousHash = (dataset.syncLists[queryHash] && dataset.syncLists[queryHash].hash) ? dataset.syncLists[queryHash].hash : '<undefined>';
       doLog(dataset_id, 'verbose', 'doSyncList cb ' + ( cb != undefined) + ' - Global Hash (prev :: cur) = ' + previousHash + ' ::  ' + globalHash);
 
       dataset.syncLists[queryHash] = {"records" : recOut, "hash": globalHash};
       dataset.timeouts[queryHash] = setTimeout(function() {
-        doSyncList(dataset_id, query_params);
+        doSyncList(dataset_id, query_params, meta_data);
       }, dataset.config.sync_frequency * 1000);
       if( cb ) {
         cb(null, dataset.syncLists[queryHash]);
       }
-    });
+    }, meta_data);
   });
 }
 
@@ -580,7 +591,12 @@ function doSyncRecords(dataset_id, params, callback) {
     if( err ) {
       return callback(err, null);
     }
-    var queryHash = generateHash(params.query_params);
+
+    var queryParamsHash = generateHash(params.query_params);
+    var metaDataHash = generateHash(params.meta_data);
+
+    var queryHash = queryParamsHash + '-' + metaDataHash;
+
     if( dataset.syncLists[queryHash] && dataset.syncLists[queryHash].records) {
       // We have a data set for this dataset_id and query hash - compare the uid and hashe values of
       // our records with the record received
@@ -625,7 +641,7 @@ function doSyncRecords(dataset_id, params, callback) {
       callback(null, res);
     } else {
       // No data set invoke the list operation on back end system,
-      redoSyncList(dataset_id, params.query_params, function(err, res) {
+      redoSyncList(dataset_id, params.query_params, params.meta_data, function(err, res) {
         callback(err, res);
       });
     }
@@ -729,6 +745,7 @@ function setLogger(dataset_id, options) {
       new (winston.transports.Console)({ level: level, debugStdout: true })
     ]
   });
+
   loggers[dataset_id] = logger;
 }
 

@@ -81,7 +81,7 @@ $fh.sync = (function() {
       self.notify_callback = callback;
     },
 
-    manage: function(dataset_id, options, query_params, meta_data) {
+    manage: function(dataset_id, options, query_params, meta_data, cb) {
       var doManage = function(dataset) {
         self.consoleLog('doManage dataset :: initialised = ' + dataset.initialised + " :: " + dataset_id + ' :: ' + JSON.stringify(options));
 
@@ -103,6 +103,10 @@ $fh.sync = (function() {
         dataset.initialised = true;
         dataset.meta = {};
         self.saveDataSet(dataset_id);
+
+        if( cb ) {
+          cb();
+        }
       };
 
       // Check if the dataset is already loaded
