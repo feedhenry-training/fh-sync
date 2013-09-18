@@ -31,7 +31,9 @@ var syncAdmin = (function() {
         return false;
       });
 
-      self.getCollisions();
+      // allow time for the dataset to be initialised.
+      setTimeout(function() { self.getCollisions(); }, 1000);
+
     },
 
 

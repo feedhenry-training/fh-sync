@@ -1,7 +1,7 @@
 var collisions = {};
 
-exports.doList = function(dataset_id, params, cb) {
-  console.log("doList : ", dataset_id, " :: ", params);
+exports.doList = function(dataset_id, params, cb, meta_data) {
+  console.log("doList : ", dataset_id, " :: ", params, ' :: meta=', meta_data);
 
   $fh.db({
     "act": "list",
@@ -27,8 +27,8 @@ exports.doList = function(dataset_id, params, cb) {
   });
 };
 
-exports.doCreate = function(dataset_id, data, cb) {
-  console.log("Starting doCreate : ", dataset_id, " :: ", data);
+exports.doCreate = function(dataset_id, data, cb, meta_data) {
+  console.log("Starting doCreate : ", dataset_id, " :: ", data, ' :: meta=', meta_data);
 
   // Store the value for recordDelay if it exists
   var recordDelay;
@@ -68,8 +68,8 @@ exports.doCreate = function(dataset_id, data, cb) {
 
 };
 
-exports.doRead = function(dataset_id, uid, cb) {
-  console.log("doRead : ", dataset_id, " :: ", uid);
+exports.doRead = function(dataset_id, uid, cb, meta_data) {
+  console.log("doRead : ", dataset_id, " :: ", uid, ' :: meta=', meta_data);
 
   $fh.db({
     "act": "read",
@@ -83,8 +83,8 @@ exports.doRead = function(dataset_id, uid, cb) {
 
 };
 
-exports.doUpdate = function(dataset_id, uid, data, cb) {
-  console.log("doUpdate : ", dataset_id, " :: ", uid, " :: ", data);
+exports.doUpdate = function(dataset_id, uid, data, cb, meta_data) {
+  console.log("doUpdate : ", dataset_id, " :: ", uid, " :: ", data, ' :: meta=', meta_data);
 
   // Store the value for recordDelay if it exists
   var recordDelay;
@@ -124,8 +124,8 @@ exports.doUpdate = function(dataset_id, uid, data, cb) {
 
 };
 
-exports.doDelete = function(dataset_id, uid, cb) {
-  console.log("doDelete : ", dataset_id, " :: ", uid);
+exports.doDelete = function(dataset_id, uid, cb, meta_data) {
+  console.log("doDelete : ", dataset_id, " :: ", uid, ' :: meta=', meta_data);
 
   $fh.db({
     "act": "delete",
@@ -138,8 +138,8 @@ exports.doDelete = function(dataset_id, uid, cb) {
   });
 };
 
-exports.doCollision = function(dataset_id, hash, timestamp, uid, pre, post) {
-  console.log("doCollision : ", dataset_id, " :: hash= ", hash, " :: timestamp= ", timestamp, " :: uid= ", uid, " :: pre= ", pre, " :: post= ", post);
+exports.doCollision = function(dataset_id, hash, timestamp, uid, pre, post, meta_data) {
+  console.log("doCollision : ", dataset_id, " :: hash= ", hash, " :: timestamp= ", timestamp, " :: uid= ", uid, " :: pre= ", pre, " :: post= ", post, ' :: meta=', meta_data);
   var fields = {
     "hash" : hash,
     "timestamp" : timestamp,
@@ -157,7 +157,8 @@ exports.doCollision = function(dataset_id, hash, timestamp, uid, pre, post) {
   });
 };
 
-exports.listCollisions = function(dataset_id, cb) {
+exports.listCollisions = function(dataset_id, cb, meta_data) {
+  console.log("listCollisions : ", dataset_id,  ' :: meta=', meta_data);
   $fh.db({
     "act": "list",
     "type": dataset_id + '_collision'
@@ -174,7 +175,8 @@ exports.listCollisions = function(dataset_id, cb) {
   });
 };
 
-exports.removeCollision = function(dataset_id, hash, cb) {
+exports.removeCollision = function(dataset_id, hash, cb, meta_data) {
+  console.log("removeCollision : ", dataset_id,  ' :: meta=', meta_data);
   $fh.db({
     "act": "list",
     "type": dataset_id + '_collision',

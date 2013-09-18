@@ -58,6 +58,20 @@
 
                 <hr/>
 
+                <div id="query-and-meta" class="well">
+                  <p class="well light-well">
+                    Query Params - can be used to filter results returned by the sync server in the cloud - to reduce dataset stored on the client. <br/>
+                    Meta Data - is passed to the cloud for all deltas (create, update & delete). This can be used to send any additional information required to complete the delta operation - e.g. user id, auth tokens etc. <br/>
+                  </p>
+
+                  <input type="text" placeholder="Query Params - JSON format" class="input-xlarge" id="queryParams" name="queryParams" />
+                  <button id="queryParamsBtn" class="btn btn-primary">Set</button>
+                  <input type="text" placeholder="Meta Data - JSON format" class="input-xlarge" id="metaData" name="metaData" />
+                  <button id="metaDataBtn" class="btn btn-primary">Set</button>
+                </div>
+
+                <hr/>
+
                 <div id="sync-delays" class="well">
                   <p class="well light-well">
                     Sync Action Delays can be used for testing race conditions of sync actions from multiple clients <br/>

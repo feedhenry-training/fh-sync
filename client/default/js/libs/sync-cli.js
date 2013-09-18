@@ -81,7 +81,7 @@ $fh.sync = (function() {
       self.notify_callback = callback;
     },
 
-    manage: function(dataset_id, options, query_params) {
+    manage: function(dataset_id, options, query_params, meta_data) {
       var doManage = function(dataset) {
         self.consoleLog('doManage dataset :: initialised = ' + dataset.initialised + " :: " + dataset_id + ' :: ' + JSON.stringify(options));
 
@@ -95,7 +95,8 @@ $fh.sync = (function() {
           datasetConfig[k] = options[k];
         }
 
-        dataset.query_params = query_params || {};
+        dataset.query_params = query_params || dataset.query_params || {};
+        dataset.meta_data = meta_data || dataset.meta_data || {};
         dataset.config = datasetConfig;
         dataset.syncRunning = false;
         dataset.syncPending = true;
@@ -189,22 +190,28 @@ $fh.sync = (function() {
     },
 
     listCollisions : function(dataset_id, success, failure){
-      $fh.act({
-        "act": dataset_id,
-        "req": {
-          "fn": "listCollisions"
-        }
-      }, success, failure);
+      self.getDataSet(dataset_id, function(dataset) {
+        $fh.act({
+          "act": dataset_id,
+          "req": {
+            "fn": "listCollisions",
+            "meta_data" : dataset.meta_data
+          }
+        }, success, failure);
+      }, failure);
     },
 
     removeCollision: function(dataset_id, colissionHash, success, failure) {
-      $fh.act({
-        "act": dataset_id,
-        "req": {
-          "fn": "removeCollision",
-          "hash": colissionHash
-        }
-      }, success, failure);
+      self.getDataSet(dataset_id, function(dataset) {
+        $fh.act({
+          "act": dataset_id,
+          "req": {
+            "fn": "removeCollision",
+            "hash": colissionHash,
+            meta_data: dataset.meta_data
+          }
+        }, success, failure);
+      }, failure);
     },
 
 
@@ -255,7 +262,59 @@ $fh.sync = (function() {
       if (dataset) {
         success(dataset);
       } else {
-        failure('unknown_dataset' + dataset_id, dataset_id);
+        failure('unknown_dataset ' + dataset_id, dataset_id);
+      }
+    },
+
+    getQueryParams: function(dataset_id, success, failure) {
+      var dataset = self.datasets[dataset_id];
+
+      if (dataset) {
+        success(dataset.query_params);
+      } else {
+        failure('unknown_dataset ' + dataset_id, dataset_id);
+      }
+    },
+
+    setQueryParams: function(dataset_id, queryParams, success, failure) {
+      var dataset = self.datasets[dataset_id];
+
+      if (dataset) {
+        dataset.query_params = queryParams;
+        self.saveDataSet(dataset_id);
+        if( success ) {
+          success(dataset.query_params);
+        }
+      } else {
+        if ( failure ) {
+          failure('unknown_dataset ' + dataset_id, dataset_id);
+        }
+      }
+    },
+
+    getMetaData: function(dataset_id, success, failure) {
+      var dataset = self.datasets[dataset_id];
+
+      if (dataset) {
+        success(dataset.meta_data);
+      } else {
+        failure('unknown_dataset ' + dataset_id, dataset_id);
+      }
+    },
+
+    setMetaData: function(dataset_id, metaData, success, failure) {
+      var dataset = self.datasets[dataset_id];
+
+      if (dataset) {
+        dataset.meta_data = metaData;
+        self.saveDataSet(dataset_id);
+        if( success ) {
+          success(dataset.meta_data);
+        }
+      } else {
+        if( failure ) {
+          failure('unknown_dataset ' + dataset_id, dataset_id);
+        }
       }
     },
 
@@ -359,6 +418,7 @@ $fh.sync = (function() {
             syncLoopParams.fn = 'sync';
             syncLoopParams.dataset_id = dataset_id;
             syncLoopParams.query_params = dataSet.query_params;
+            syncLoopParams.meta_data = dataSet.meta_data;
             //var datasetHash = self.generateLocalDatasetHash(dataSet);
             syncLoopParams.dataset_hash = dataSet.hash;
             syncLoopParams.acknowledgements = dataSet.acknowledgements || [];
@@ -1006,6 +1066,10 @@ $fh.sync = (function() {
     removeCollision: self.removeCollision,
     getPending : self.getPending,
     clearPending : self.clearPending,
-    getDataset : self.getDataSet
+    getDataset : self.getDataSet,
+    getQueryParams: self.getQueryParams,
+    setQueryParams: self.setQueryParams,
+    getMetaData: self.getMetaData,
+    setMetaData: self.setMetaData
   };
 })();

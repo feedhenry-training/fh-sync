@@ -14,6 +14,8 @@ var syncUser = (function() {
       $('#addBtn').unbind().click(self.addItem);
       $('#syncDelayBtn').unbind().click(self.setSyncDelay);
       $('#recordDelayBtn').unbind().click(self.setRecordDelay);
+      $('#queryParamsBtn').unbind().click(self.setQueryParams);
+      $('#metaDataBtn').unbind().click(self.setMetaData);
       $('#clearNotificationsBtn').unbind().click(self.clearNotifications);
 
       // Initialise the Sync Service. See http://docs.feedhenry.com/v2/api_js_client_api.html#$fh.sync for details on initialisation options
@@ -130,11 +132,34 @@ var syncUser = (function() {
     },
 
     setSyncDelay: function() {
-      var query_params = {
-        syncDelay : $('#syncDelay').val()
-      };
+      self.setQueryParams();
+    },
 
-      sync.manage(datasetId, {}, query_params);
+    setQueryParams: function() {
+      var queryParmas = $('#queryParams').val();
+      try {
+        var queryParamsJson = JSON.parse(queryParmas);
+      } catch (e) {
+        alert('Invalid JSON in Query Params');
+        return;
+      }
+
+      // Store the sync delay as a query param
+      queryParamsJson.syncDelay = $('#syncDelay').val();
+
+      sync.setQueryParams(datasetId, queryParamsJson);
+    },
+
+    setMetaData: function() {
+      var metaData = $('#metaData').val();
+      try {
+        var metaDataJson = JSON.parse(metaData);
+      } catch (e) {
+        alert('Invalid JSON in Meta Data');
+        return;
+      }
+
+      sync.setMetaData(datasetId, metaDataJson);
     },
 
     setRecordDelay: function() {

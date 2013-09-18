@@ -261,6 +261,7 @@ function doClientSync(dataset_id, params, callback) {
 
 function processPending(dataset_id, dataset, params, cb) {
   var pending = params.pending;
+  var meta_data = params.meta_data;
 
   var cuid = getCuid(params);
 
@@ -307,7 +308,7 @@ function processPending(dataset_id, dataset, params, cb) {
         }
         doLog(dataset_id, 'info', 'CREATE Success - uid=' + data.uid + ' : hash = ' + hash, params);
         return addUpdate("applied", "create", hash, data.uid, '', itemCallback);
-      });
+      }, meta_data);
     }
     else if ( "update" === action ) {
       doLog(dataset_id, 'info', 'UPDATE Start', params);
@@ -332,7 +333,7 @@ function processPending(dataset_id, dataset, params, cb) {
             }
             doLog(dataset_id, 'info', 'UPDATE Success - uid=' + uid + ' : hash = ' + hash, params);
             return addUpdate("applied", "update", hash, uid, '', itemCallback);
-          });
+          }, meta_data);
         } else {
           var postHash = generateHash(post);
           if( postHash === dataHash ) {
@@ -342,11 +343,11 @@ function processPending(dataset_id, dataset, params, cb) {
           }
           else {
             doLog(dataset_id, 'warn', 'UPDATE COLLISION \n Pre record from client:\n' + util.inspect(sortObject(pre)) + '\n Current record from data store:\n' + util.inspect(sortObject(data)), params);
-            dataset.collisionHandler(dataset_id, hash, timestamp, uid, pre, post);
+            dataset.collisionHandler(dataset_id, hash, timestamp, uid, pre, post, meta_data);
             return addUpdate("collisions", "update", hash, uid, '', itemCallback);
           }
         }
-      });
+      }, meta_data);
     }
     else if ( "delete" === action ) {
       doLog(dataset_id, 'info', 'DELETE Start', params);
@@ -377,14 +378,14 @@ function processPending(dataset_id, dataset, params, cb) {
               }
               doLog(dataset_id, 'info', 'DELETE Success - uid=' + uid + ' : hash = ' + hash, params);
               return addUpdate("applied", "delete", hash, uid, '', itemCallback);
-            });
+            }, meta_data);
           } else {
             doLog(dataset_id, 'warn', 'DELETE COLLISION \n Pre record from client:\n' + util.inspect(sortObject(pre)) + '\n Current record from data store:\n' + util.inspect(sortObject(data)), params);
-            dataset.collisionHandler(dataset_id, hash, timestamp, uid, pre, post);
+            dataset.collisionHandler(dataset_id, hash, timestamp, uid, pre, post, meta_data);
             return addUpdate("collisions", "delete", hash, uid, '', itemCallback);
           }
         }
-      });
+      }, meta_data);
     }
     else {
       doLog(dataset_id, 'warn', 'unknown action : ' + action, params);

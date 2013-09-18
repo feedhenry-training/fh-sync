@@ -37,7 +37,7 @@ hr {
   margin-top: 10px;
 }
 
-#itemUp, #recordDelay {
+#itemUp, #recordDelay, #metaData {
   margin-left: 30px;
 }
 
@@ -177,7 +177,7 @@ h4.center {
     background-color: #DDEE79;
 }
 
-#addBtn, #updateBtn, #syncDelayBtn, #recordDelayBtn {
+#addBtn, #updateBtn, #syncDelayBtn, #recordDelayBtn, #queryParamsBtn, #metaDataBtn {
   margin-top: -10px;
     width: 75px;
 }
