@@ -4,7 +4,8 @@ $fh.sync = (function() {
   var self = {
 
     // CONFIG
-    defaults: {
+    defaults:
+    {
       "sync_frequency": 10,
       // How often to synchronise data with the cloud in seconds.
       "auto_sync_local_updates": true,
@@ -33,8 +34,10 @@ $fh.sync = (function() {
       // Should log statements be written to console.log
       "crashed_count_wait" : 10,
       // How many syncs should we check for updates on crashed in flight updates before we give up searching
-      "resend_crashed_updates" : true
+      "resend_crashed_updates" : true,
       // If we have reached the crashed_count_wait limit, should we re-try sending the crashed in flight pending record
+      "sync_active" : true
+      // Is the background sync with the cloud currently active
     },
 
     notifications: {
@@ -70,6 +73,7 @@ $fh.sync = (function() {
     // PUBLIC FUNCTION IMPLEMENTATIONS
     init: function(options) {
       self.consoleLog('sync - init called');
+
       self.config = JSON.parse(JSON.stringify(self.defaults));
       for (var i in options) {
         self.config[i] = options[i];
@@ -82,18 +86,12 @@ $fh.sync = (function() {
     },
 
     manage: function(dataset_id, options, query_params, meta_data, cb) {
+      self.consoleLog('manage - START');
+
       var doManage = function(dataset) {
         self.consoleLog('doManage dataset :: initialised = ' + dataset.initialised + " :: " + dataset_id + ' :: ' + JSON.stringify(options));
 
-        // Make sure config is initialised
-        if( ! self.config ) {
-          self.config = JSON.parse(JSON.stringify(self.defaults));
-        }
-
-        var datasetConfig = JSON.parse(JSON.stringify(self.config));
-        for (var k in options) {
-          datasetConfig[k] = options[k];
-        }
+        var datasetConfig = self.setOptions(options);
 
         dataset.query_params = query_params || dataset.query_params || {};
         dataset.meta_data = meta_data || dataset.meta_data || {};
@@ -102,20 +100,26 @@ $fh.sync = (function() {
         dataset.syncPending = true;
         dataset.initialised = true;
         dataset.meta = {};
-        self.saveDataSet(dataset_id);
 
-        if( cb ) {
-          cb();
-        }
+        self.saveDataSet(dataset_id, function() {
+
+          if( cb ) {
+            cb();
+          }
+        });
       };
 
       // Check if the dataset is already loaded
       self.getDataSet(dataset_id, function(dataset) {
+        self.consoleLog('manage - dataset already loaded');
         doManage(dataset);
       }, function(err) {
+        self.consoleLog('manage - dataset not loaded... trying to load');
 
         // Not already loaded, try to load from local storage
         self.loadDataSet(dataset_id, function(dataset) {
+            self.consoleLog('manage - dataset loaded from local storage');
+
             // Loading from local storage worked
 
             // Fire the local update event to indicate that dataset was loaded from local storage
@@ -126,7 +130,7 @@ $fh.sync = (function() {
           },
           function(err) {
             // No dataset in memory or local storage - create a new one and put it in memory
-            self.consoleLog('Creating new dataset for id ' + dataset_id);
+            self.consoleLog('manage - Creating new dataset for id ' + dataset_id);
             var dataset = {};
             dataset.pending = {};
             self.datasets[dataset_id] = dataset;
@@ -135,9 +139,23 @@ $fh.sync = (function() {
       });
     },
 
+    setOptions: function(options) {
+      // Make sure config is initialised
+      if( ! self.config ) {
+        self.config = JSON.parse(JSON.stringify(self.defaults));
+      }
+
+      var datasetConfig = JSON.parse(JSON.stringify(self.config));
+      for (var k in options) {
+        datasetConfig[k] = options[k];
+      }
+
+      return datasetConfig;
+    },
+
     list: function(dataset_id, success, failure) {
       self.getDataSet(dataset_id, function(dataset) {
-        if (dataset) {
+        if (dataset && dataset.data) {
           // Return a copy of the dataset so updates will not automatically make it back into the dataset
           var res = JSON.parse(JSON.stringify(dataset.data));
           success(res);
@@ -314,6 +332,33 @@ $fh.sync = (function() {
         self.saveDataSet(dataset_id);
         if( success ) {
           success(dataset.meta_data);
+        }
+      } else {
+        if( failure ) {
+          failure('unknown_dataset ' + dataset_id, dataset_id);
+        }
+      }
+    },
+
+    getConfig: function(dataset_id, success, failure) {
+      var dataset = self.datasets[dataset_id];
+
+      if (dataset) {
+        success(dataset.config);
+      } else {
+        failure('unknown_dataset ' + dataset_id, dataset_id);
+      }
+    },
+
+    setConfig: function(dataset_id, config, success, failure) {
+      var dataset = self.datasets[dataset_id];
+
+      if (dataset) {
+        var fullConfig = self.setOptions(config);
+        dataset.config = fullConfig;
+        self.saveDataSet(dataset_id);
+        if( success ) {
+          success(dataset.config);
         }
       } else {
         if( failure ) {
@@ -593,7 +638,7 @@ $fh.sync = (function() {
         if( self.datasets.hasOwnProperty(dataset_id) ) {
           var dataset = self.datasets[dataset_id];
 
-          if( !dataset.syncRunning ) {
+          if( !dataset.syncRunning && dataset.config.sync_active) {
             // Check to see if it is time for the sync loop to run again
             var lastSyncStart = dataset.syncLoopStart;
             var lastSyncCmp = dataset.syncLoopEnd;
@@ -1055,6 +1100,8 @@ $fh.sync = (function() {
 
   (function() {
     self.config = self.defaults;
+    //Initialse the sync service with default config
+    self.init({});
   })();
 
   return {
@@ -1074,6 +1121,8 @@ $fh.sync = (function() {
     getQueryParams: self.getQueryParams,
     setQueryParams: self.setQueryParams,
     getMetaData: self.getMetaData,
-    setMetaData: self.setMetaData
+    setMetaData: self.setMetaData,
+    getConfig: self.getConfig,
+    setConfig: self.setConfig
   };
 })();

@@ -3,6 +3,10 @@ var collisions = {};
 exports.doList = function(dataset_id, params, cb, meta_data) {
   console.log("doList : ", dataset_id, " :: ", params, ' :: meta=', meta_data);
 
+  if( meta_data && meta_data.doError ) {
+    return cb("List error returned because meta_data.doError = true");
+  }
+
   $fh.db({
     "act": "list",
     "type": dataset_id

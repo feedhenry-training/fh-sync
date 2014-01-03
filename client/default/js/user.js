@@ -17,6 +17,25 @@ var syncUser = (function() {
       $('#metaDataBtn').unbind().click(self.setMetaData);
       $('#clearNotificationsBtn').unbind().click(self.clearNotifications);
 
+      var metaDataJson = {};
+
+      sync.getMetaData(datasetId, function(res1) {
+        console.log('current sync meta data = ', res1);
+        sync.setMetaData(datasetId, metaDataJson, function(res2) {
+          console.log('set sync meta data to ', res2);
+          sync.getMetaData(datasetId, function(res3) {
+            console.log('sync meta data is now ', res3);
+          }, function(err1) {
+            console.log('ERROR: error calling getMetaData (1) : ', err1);
+          });
+        }, function(err2) {
+          console.log('ERROR: error calling setMetaData (2) : ', err2);
+        });
+      }, function(err3) {
+        console.log('ERROR: error calling getMetaData (3) : ', err3);
+      });
+
+
       // Initialise the Sync Service. See http://docs.feedhenry.com/v2/api_js_client_api.html#$fh.sync for details on initialisation options
       sync.init({
         "sync_frequency": 5,
@@ -187,7 +206,25 @@ var syncUser = (function() {
       metaDataJson.syncDelay = $('#syncDelay').val();
       metaDataJson.recordDelay = $('#recordDelay').val();
 
-      sync.setMetaData(datasetId, metaDataJson);
+
+      sync.getMetaData(datasetId, function(res1) {
+        console.log('current sync meta data = ', res1);
+        sync.setMetaData(datasetId, metaDataJson, function(res2) {
+          console.log('set sync meta data to ', res2);
+          sync.getMetaData(datasetId, function(res3) {
+            console.log('sync meta data is now ', res3);
+          }, function(err1) {
+            console.log('ERROR: error calling getMetaData (1) : ', err1);
+          });
+        }, function(err2) {
+          console.log('ERROR: error calling setMetaData (2) : ', err2);
+        });
+      }, function(err3) {
+        console.log('ERROR: error calling getMetaData (3) : ', err3);
+      });
+
+
+//      sync.setMetaData(datasetId, metaDataJson);
     },
 
 
