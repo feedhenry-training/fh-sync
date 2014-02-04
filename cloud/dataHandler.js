@@ -208,7 +208,7 @@ exports.removeCollision = function(dataset_id, hash, cb, meta_data) {
         "guid": guid
       }, cb);
     } else {
-      return cb("removeCollision :: No collision found for hash " + hash);
+      return cb(null, "removeCollision :: No collision found for hash " + hash);
     }
   });
 }
