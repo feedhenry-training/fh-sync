@@ -3,6 +3,7 @@ var async = require('async');
 var winston = require('winston');
 var moment = require('moment');
 var util = require('util');
+var events = require('events');
 
 var SYNC_LOGGER = 'SYNC';
 
@@ -207,7 +208,7 @@ function doClientSync(dataset_id, params, callback) {
     return callback("no_query_params", null);
   }
 
-  getDataset(dataset_id, function(err, dataset) {
+  DataSetModel.getDataset(dataset_id, function(err, dataset) {
     if( err ) {
       return callback(err, null);
     }
@@ -215,50 +216,49 @@ function doClientSync(dataset_id, params, callback) {
       return callback("no_listHandler", null);
     }
 
+    DataSetModel.getOrCreateDatasetClient(dataset_id, params.query_params, params.meta_data, function(err, datasetClient) {
+      if(err) return cb(err);
 
-    //Deal with any Acknowledgement of updates from the client
-    acknowledgeUpdates(dataset_id, params, function(err) {
+      //Deal with any Acknowledgement of updates from the client
+      acknowledgeUpdates(dataset_id, params, function(err) {
 
-      if( params.pending && params.pending.length > 0) {
-        doLog(dataset_id, 'info', 'Found ' + params.pending.length + ' pending records. processing', params);
+        if( params.pending && params.pending.length > 0) {
+          doLog(dataset_id, 'info', 'Found ' + params.pending.length + ' pending records. processing', params);
 
-        // Process Pending Params then re-sync data
-        processPending(dataset_id, dataset, params, function() {
-          doLog(dataset_id, 'verbose', 'back from processPending', params);
-          // Changes have been submitted from client, redo the list operation on back end system,
-          redoSyncList(dataset_id, params.query_params, params.meta_data, function(err, res) {
-            returnUpdates(dataset_id, params, res, callback);
-          });
-        });
-      }
-      else {
-        // No pending updates, just sync client dataset
-        var queryParamsHash = generateHash(params.query_params);
-        var metaDataHash = generateHash(params.meta_data);
-
-        var queryHash = queryParamsHash + '-' + metaDataHash;
-
-        if( dataset.syncLists[queryHash] ) {
-          doLog(dataset_id, 'verbose', 'doClientSync - No pending - Hash (Client :: Cloud) = ' + params.dataset_hash + ' :: ' + dataset.syncLists[queryHash].hash, params);
-
-          if( dataset.syncLists[queryHash].hash === params.dataset_hash) {
-            doLog(dataset_id, 'verbose', 'doClientSync - No pending - Hashes match. Just return hash');
-            var res = {"hash": dataset.syncLists[queryHash].hash};
-            returnUpdates(dataset_id, params, res, callback);
-          }
-          else {
-            doLog(dataset_id, 'info', 'doClientSync - No pending - Hashes NO NOT match (Client :: Cloud) = ' + params.dataset_hash + ' :: ' + dataset.syncLists[queryHash].hash + ' - return full dataset', params);
-            var res = dataset.syncLists[queryHash];
-            returnUpdates(dataset_id, params, res, callback);
-          }
-        } else {
-          doLog(dataset_id, 'verbose', 'No pending records. No cloud data set - invoking list on back end system', params);
-          redoSyncList(dataset_id, params.query_params, params.meta_data, function(err, res) {
-            if( err ) callback(err);
-            returnUpdates(dataset_id, params, res, callback);
+          // Process Pending Params then re-sync data
+          processPending(dataset_id, dataset, params, function() {
+            doLog(dataset_id, 'verbose', 'back from processPending', params);
+            // Changes have been submitted from client, redo the list operation on back end system.
+            DataSetModel.syncDatasetClientObj(datasetClient, function(err, res) {
+              returnUpdates(dataset_id, params, res, callback);
+            });
           });
         }
-      }
+        else {
+          if( datasetClient.data.hash ) {
+            // No pending updates, just sync client dataset
+            doLog(dataset_id, 'verbose', 'doClientSync - No pending - Hash (Client :: Cloud) = ' + params.dataset_hash + ' :: ' + datasetClient.data.hash, params);
+
+            if( datasetClient.data.hash === params.dataset_hash) {
+              doLog(dataset_id, 'verbose', 'doClientSync - No pending - Hashes match. Just return hash');
+              var res = {"hash": datasetClient.hash};
+              returnUpdates(dataset_id, params, res, callback);
+            }
+            else {
+              doLog(dataset_id, 'info', 'doClientSync - No pending - Hashes NO NOT match (Client :: Cloud) = ' + params.dataset_hash + ' :: ' + datasetClient.data.hash + ' - return full dataset', params);
+              // TODO - Partial Sync
+              var res = datasetClient.data;
+              returnUpdates(dataset_id, params, res, callback);
+            }
+          } else {
+            doLog(dataset_id, 'verbose', 'No pending records. No cloud data set - invoking list on back end system', params);
+            DataSetModel.syncDatasetClient(dataset_id, params.query_params, params.meta_data, function(err, res) {
+              if( err ) callback(err);
+              returnUpdates(dataset_id, params, res, callback);
+            });
+          }
+        }
+      });
     });
   });
 }
@@ -500,85 +500,6 @@ function acknowledgeUpdates(dataset_id, params, cb) {
   }
 }
 
-function redoSyncList(dataset_id, query_params, meta_data, cb) {
-  getDataset(dataset_id, function(err, dataset) {
-    if( err ) {
-      return cb(err, null);
-    }
-    // Clear any existing timeouts so sync does not run multiple times
-    var queryParamsHash = generateHash(query_params);
-    var metaDataHash = generateHash(meta_data);
-
-    var queryHash = queryParamsHash + '-' + metaDataHash;
-
-    if( dataset && dataset.timeouts && dataset.timeouts[queryHash]) {
-      doLog(dataset_id, 'info', 'redoSyncList :: Clearing timeout for dataset sync loop - queryParams : ' + util.inspect(query_params));
-      clearTimeout(dataset.timeouts[queryHash]);
-    }
-    // Invoke the sync List;
-    doSyncList(dataset_id, query_params, meta_data, cb);
-  });
-}
-
-function doSyncList(dataset_id, query_params, meta_data, cb) {
-  getDataset(dataset_id, function(err, dataset) {
-    if( err ) {
-      // doSyncList is recursively called with no callback. This means we must
-      // check if cb exists before passing the error to it.
-      if( cb ) {
-        return cb(err, null);
-      }
-      else {
-        doLog(dataset_id, 'error', 'Error getting dataset in doSyncList : ' + err);
-        return;
-      }
-    }
-    if( ! dataset.listHandler ) {
-      return cb("no_listHandler", null);
-    }
-
-    dataset.listHandler(dataset_id, query_params, function(err, records) {
-      if( err ) {
-        if( cb ) {
-          cb(err);
-        }
-        return;
-      }
-
-      var hashes = [];
-      var shasum;
-      var recOut = {};
-      for(var i in records ) {
-        var rec = {};
-        var recData = records[i];
-        var hash = generateHash(recData);
-        hashes.push(hash);
-        rec.data = recData;
-        rec.hash = hash;
-        recOut[i] = rec;
-      }
-      var globalHash = generateHash(hashes);
-
-      var queryParamsHash = generateHash(query_params);
-      var metaDataHash = generateHash(meta_data);
-
-      var queryHash = queryParamsHash + '-' + metaDataHash;
-
-      var previousHash = (dataset.syncLists[queryHash] && dataset.syncLists[queryHash].hash) ? dataset.syncLists[queryHash].hash : '<undefined>';
-      doLog(dataset_id, 'verbose', 'doSyncList cb ' + ( cb != undefined) + ' - Global Hash (prev :: cur) = ' + previousHash + ' ::  ' + globalHash);
-
-      dataset.syncLists[queryHash] = {"records" : recOut, "hash": globalHash};
-      dataset.timeouts[queryHash] = setTimeout(function() {
-        doSyncList(dataset_id, query_params, meta_data);
-      }, dataset.config.sync_frequency * 1000);
-      if( cb ) {
-        cb(null, dataset.syncLists[queryHash]);
-      }
-    }, meta_data);
-  });
-}
-
-
 /* Synchronise the individual records for a dataset */
 function doSyncRecords(dataset_id, params, callback) {
   doLog(dataset_id, 'verbose', 'doSyncRecords', params);
@@ -587,17 +508,13 @@ function doSyncRecords(dataset_id, params, callback) {
     return callback("no_query_params", null);
   }
 
-  getDataset(dataset_id, function(err, dataset) {
+  DataSetModel.getDatasetClient(dataset_id, params.query_params, params.meta_data, function(err, datasetClient) {
     if( err ) {
       return callback(err, null);
     }
 
-    var queryParamsHash = generateHash(params.query_params);
-    var metaDataHash = generateHash(params.meta_data);
 
-    var queryHash = queryParamsHash + '-' + metaDataHash;
-
-    if( dataset.syncLists[queryHash] && dataset.syncLists[queryHash].records) {
+    if( datasetClient.data.hash) {
       // We have a data set for this dataset_id and query hash - compare the uid and hashe values of
       // our records with the record received
 
@@ -606,7 +523,7 @@ function doSyncRecords(dataset_id, params, callback) {
       var deletes = {};
       var i;
 
-      var serverRecs = dataset.syncLists[queryHash].records;
+      var serverRecs = datasetClient.data.records;
 
       var clientRecs = {};
       if( params && params.clientRecs) {
@@ -640,54 +557,9 @@ function doSyncRecords(dataset_id, params, callback) {
       var res = {"create": creates, "update": updates, "delete":deletes, "hash":dataset.syncLists[queryHash].hash};
       callback(null, res);
     } else {
-      // No data set invoke the list operation on back end system,
-      redoSyncList(dataset_id, params.query_params, params.meta_data, function(err, res) {
-        callback(err, res);
-      });
+      DataSetModel.syncDatasetClient(datasetClient, callback);
     }
   });
-}
-
-function getDataset(dataset_id, cb) {
-
-  // TODO - Persist data sets - in memory or more permanently ($fh.db())
-  if( deleted_datasets[dataset_id] ) {
-    return cb("unknown_dataset", null);
-  }
-  else {
-    var dataset = datasets[dataset_id];
-    if( ! dataset ) {
-      return cb("unknown_dataset", null);
-    }
-    else {
-      return cb(null, dataset);
-    }
-  }
-}
-
-function createDataset(dataset_id, cb) {
-  delete deleted_datasets[dataset_id];
-
-  var dataset = datasets[dataset_id];
-  if( ! dataset ) {
-    dataset = {};
-    dataset.id = dataset_id;
-    dataset.created = new Date().getTime();
-    dataset.syncLists = {};
-    dataset.timeouts = {};
-    datasets[dataset_id]= dataset;
-  }
-  cb(null, dataset);
-}
-
-function removeDataset(dataset_id, cb) {
-
-  // TODO - Persist data sets - in memory or more permanently ($fh.db())
-  deleted_datasets[dataset_id] = new Date().getTime();
-
-  delete datasets[dataset_id];
-
-  cb(null, {});
 }
 
 function generateHash(plainText) {
@@ -775,10 +647,6 @@ function getCuid(params) {
 
 var loggers = {};
 
-var datasets = {};
-
-var deleted_datasets = {};
-
 // CONFIG
 var defaults = {
   "sync_frequency": 10,
@@ -799,3 +667,271 @@ var invokeFunctions = {
 /* =================== INITIALISATION ==================== */
 /* ======================================================= */
 setLogger(SYNC_LOGGER, {logLevel : defaults.logLevel});
+
+
+
+
+/* ======================================================= */
+/* =================== DataSets Object ==================== */
+/* ======================================================= */
+
+var DataSetModel = (function() {
+
+  var self = {
+
+    defaults : {
+      "syncFrequency": 10
+    },
+
+    datasets : {},
+    deletedDatasets : {},
+
+
+    getDataset : function(dataset_id, cb) {
+
+      // TODO - Persist data sets - in memory or more permanently ($fh.db())
+      if( self.deletedDatasets[dataset_id] ) {
+        return cb("unknown_dataset - " + dataset_id, null);
+      }
+      else {
+        var dataset = datasets[dataset_id];
+        if( ! dataset ) {
+          return cb("unknown_dataset - " + dataset_id, null);
+        }
+        else {
+          return cb(null, dataset);
+        }
+      }
+    },
+
+    createDataset : function(dataset_id, cb) {
+      delete self.deletedDatasets[dataset_id];
+
+      var dataset = self.datasets[dataset_id];
+      if( ! dataset ) {
+        dataset = {
+          id : dataset_id,
+          created : new Date().getTime(),
+          clients : {}
+      }
+        self.datasets[dataset_id]= dataset;
+      }
+      cb(null, dataset);
+    },
+
+    removeDataset : function(dataset_id, cb) {
+
+      // TODO - Persist data sets - in memory or more permanently ($fh.db())
+      self.deletedDatasets[dataset_id] = new Date().getTime();
+
+      delete self.datasets[dataset_id];
+
+      cb(null, {});
+    },
+
+    getOrCreateDatasetClient : function(dataset_id, query_params, meta_data, cb) {
+      self.getDataset(dataset_id, function(err, dataset) {
+        if( err ) return err;
+        var clientHash = self.getClientHash(query_params, meta_data);
+        var datasetClient = dataset[clientHash];
+        if( ! datasetClient ) {
+          return self.createDatasetClient(dataset_id, query_params, meta_data, cb);
+        }
+        else {
+          return cb(null, datasetClient);
+        }
+      })
+    },
+
+    getDatasetClientByObj : function(datasetClient, cb) {
+      if( datasetClient && datasetClient.id && datasetClient.datasetId) {
+        self.getDataset(datasetClient.datasetId, function(err, dataset) {
+          if(err) return cb(err);
+          var dsc = dataset[datasetClient.id];
+          if( ! dsc ) return cb('Unknown datasetClient');
+          return cb(null, dsc);
+        });
+      }
+      else {
+        return cb('Unknown datasetClient');
+      }
+    },
+
+    getDatasetClient : function(dataset_id, query_params, meta_data, cb) {
+      self.getDataset(dataset_id, function(err, dataset) {
+      if( err ) return err;
+        var clientHash = self.getClientHash(query_params, meta_data);
+        var datasetClient = dataset[clientHash];
+        if( ! datasetClient ) return cb('Unknown dataset client for dataset_id ' + dataset_id);
+        return cb(null, datasetClient);
+      })
+    },
+
+    createDatasetClient : function(dataset_id, query_params, meta_data, config, cb) {
+      self.getDataset(dataset_id, function(err, dataset) {
+        if( err ) return err;
+        var clientHash = self.getClientHash(query_params, meta_data);
+        var datasetClient = dataset[clientHash];
+        if( ! datasetClient ) {
+          datasetClient = {
+            id : clientHash,
+            datasetId : dataset_id,
+            created : new Date().getTime(),
+            queryParams : query_params,
+            metaData : meta_data,
+            config : config,
+            syncRunning : false,
+            syncPending : true,
+            syncActive : true,
+            pendingCallbacks : [],
+            data : {}
+          };
+          dataset[clientHash] = datasetClient;
+        }
+        return cb(null, datasetClient);
+      })
+    },
+
+    removeDatasetClient : function(datasetClient, cb) {
+      if( datasetClient && datasetClient.id ) {
+        delete dataset[datasetClient.id];
+      }
+      cb();
+    },
+
+    syncDatasetClient : function(dataset_id, query_params, meta_data, cb) {
+      self.getDatasetClient(dataset_id, query_params, meta_data, function(err, dsc) {
+        if(err) return cb(err);
+        dsc.syncPending = true;
+        dsc.pendingCallbacks.push(cb);
+      });
+    },
+
+    syncDatasetClientObj : function(datasetClient, cb) {
+      self.getDatasetClientByObj(datasetClient, function(err, dsc) {
+        if(err) return cb(err);
+        dsc.syncPending = true;
+        dsc.pendingCallbacks.push(cb);
+      });
+    },
+
+    getClientHash: function(query_params, meta_data) {
+      var queryParamsHash = generateHash(query_params);
+      var metaDataHash = generateHash(meta_data);
+
+      return queryParamsHash + '-' + metaDataHash;
+    },
+
+    doSyncList : function(dataset, datasetClient, cb) {
+      if( ! dataset.listHandler ) {
+        return cb("no_listHandler", null);
+      }
+
+      dataset.listHandler(dataset_id, datasetClient.query_params, function(err, records) {
+        if( err ) return cb(err);
+
+
+        var hashes = [];
+        var recOut = {};
+        for(var i in records ) {
+          var rec = {};
+          var recData = records[i];
+          var hash = generateHash(recData);
+          hashes.push(hash);
+          rec.data = recData;
+          rec.hash = hash;
+          recOut[i] = rec;
+        }
+        var globalHash = generateHash(hashes);
+
+        var previousHash = datasetClient.data.hash ? datasetClient.data.hash : '<undefined>';
+        doLog(dataset.id, 'verbose', 'doSyncList cb ' + ( cb != undefined) + ' - Global Hash (prev :: cur) = ' + previousHash + ' ::  ' + globalHash);
+
+        datasetClient.data = {"records" : recOut, "hash": globalHash};
+        if( cb ) {
+          cb(null, datasetClient.data);
+        }
+      }, meta_data);
+    },
+
+    doSyncLoop : function() {
+      for( var dataset_id in self.datasets ) {
+        if( self.datasets.hasOwnProperty(dataset_id) ) {
+          var dataset = self.datasets[dataset_id];
+          for( var datasetClient in dataset ) {
+            if( dataset.hasOwnProperty(datasetClient) ) {
+              if( !datasetClient.syncRunning && datasetClient.syncActive) {
+                // Check to see if it is time for the sync loop to run again
+                var lastSyncStart = datasetClient.syncLoopStart;
+                var lastSyncCmp = datasetClient.syncLoopEnd;
+                if( lastSyncStart == null ) {
+                  doLog(dataset_id, 'debug', 'Performing initial sync');
+                  // Dataset has never been synced before - do initial sync
+                  datasetClient.syncPending = true;
+                } else if (lastSyncCmp != null) {
+                  var timeSinceLastSync = new Date().getTime() - lastSyncCmp;
+                  var syncFrequency = dataset.config.sync_frequency * 1000;
+                  if( timeSinceLastSync > syncFrequency ) {
+                    // Time between sync loops has passed - do another sync
+                    datasetClient.syncPending = true;
+                  }
+                }
+
+                if( datasetClient.syncPending ) {
+                  // If the dataset requres syncing, run the sync loop. This may be because the sync interval has passed
+                  // or because the sync_frequency has been changed or because the syncPending flag was deliberately set
+                  self.doSyncList(dataset, datasetClient, function(err, res) {
+
+                    // Check if there are aby pending callbacks for this sync Client;
+                    var pendingCallbacks = datasetClient.pendingCallbacks;
+                    datasetClient.pendingCallbacks = [];
+                    for( var i = 0; i < pendingCallbacks.length(); i++) {
+                      var cb = pendingCallbacks[i];
+
+                      // Use process.nextTick so we can complete the syncLoop before all the callbacks start to fire
+                      function invokeCb() {
+                        cb(err, res);
+                      };
+                      process.nextTick(invokeCb);
+                    }
+                  });
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+
+    datasetMonitor : function() {
+      self.doSyncLoop();
+
+      // Re-execute datasetMonitor every 500ms so we keep invoking doSyncLoop();
+      setTimeout(function() {
+        self.datasetMonitor();
+      }, 500);
+    }
+  };
+
+  var init = function() {
+    doLog('', 'info', 'DataSetModel Init');
+
+    self.datasetMonitor();
+
+  };
+
+  init();
+
+  return {
+    getOrCreateDatasetClient: self.getOrCreateDatasetClient,
+    getDataset : self.getDataset,
+    createDataset : self.createDataset,
+    removeDataset : self.removeDataset,
+    getDatasetClient: self.getDatasetClient,
+    createDatasetClient : self.createDatasetClient,
+    removeDatasetClient : self.removeDatasetClient,
+    syncDatasetClient : self.syncDatasetClient,
+    syncDatasetClientObj : self.syncDatasetClientObj,
+    getClientHash : self.getClientHash
+  }
+})();
