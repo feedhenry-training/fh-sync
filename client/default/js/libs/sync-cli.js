@@ -367,6 +367,18 @@ $fh.sync = (function() {
       }
     },
 
+    startSync: function(dataset_id, success, failure) {
+      self.setConfig(dataset_id, {"sync_active" : true}, function() {
+        success();
+      }, failure);
+    },
+
+    stopSync: function(dataset_id, success, failure) {
+      self.setConfig(dataset_id, {"sync_active" : false}, function() {
+        success();
+      }, failure);
+    },
+
     sortObject : function(object) {
       if (typeof object !== "object" || object === null) {
         return object;
@@ -467,6 +479,7 @@ $fh.sync = (function() {
             syncLoopParams.fn = 'sync';
             syncLoopParams.dataset_id = dataset_id;
             syncLoopParams.query_params = dataSet.query_params;
+            syncLoopParams.config = dataSet.config;
             syncLoopParams.meta_data = dataSet.meta_data;
             //var datasetHash = self.generateLocalDatasetHash(dataSet);
             syncLoopParams.dataset_hash = dataSet.hash;
@@ -1123,6 +1136,8 @@ $fh.sync = (function() {
     getMetaData: self.getMetaData,
     setMetaData: self.setMetaData,
     getConfig: self.getConfig,
-    setConfig: self.setConfig
+    setConfig: self.setConfig,
+    stopSync: self.stopSync,
+    startSync: self.startSync
   };
 })();

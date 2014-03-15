@@ -24,7 +24,7 @@ exports.stopAll = function(callback) {
 };
 
 exports.handleList = function(dataset_id, fn) {
-  getDataset(dataset_id, function(err, dataset) {
+  DataSetModel.getDataset(dataset_id, function(err, dataset) {
     if( ! err ) {
       dataset.listHandler = fn;
     }
@@ -32,7 +32,7 @@ exports.handleList = function(dataset_id, fn) {
 };
 
 exports.handleCreate = function(dataset_id, fn) {
-  getDataset(dataset_id, function(err, dataset) {
+  DataSetModel.getDataset(dataset_id, function(err, dataset) {
     if( ! err ) {
       dataset.createHandler = fn;
     }
@@ -40,7 +40,7 @@ exports.handleCreate = function(dataset_id, fn) {
 };
 
 exports.handleRead = function(dataset_id, fn) {
-  getDataset(dataset_id, function(err, dataset) {
+  DataSetModel.getDataset(dataset_id, function(err, dataset) {
     if( ! err ) {
       dataset.readHandler = fn;
     }
@@ -48,7 +48,7 @@ exports.handleRead = function(dataset_id, fn) {
 };
 
 exports.handleUpdate = function(dataset_id, fn) {
-  getDataset(dataset_id, function(err, dataset) {
+  DataSetModel.getDataset(dataset_id, function(err, dataset) {
     if( ! err ) {
       dataset.updateHandler = fn;
     }
@@ -56,7 +56,7 @@ exports.handleUpdate = function(dataset_id, fn) {
 };
 
 exports.handleDelete = function(dataset_id, fn) {
-  getDataset(dataset_id, function(err, dataset) {
+  DataSetModel.getDataset(dataset_id, function(err, dataset) {
     if( ! err ) {
       dataset.deleteHandler = fn;
     }
@@ -64,7 +64,7 @@ exports.handleDelete = function(dataset_id, fn) {
 };
 
 exports.handleCollision = function(dataset_id, fn) {
-  getDataset(dataset_id, function(err, dataset) {
+  DataSetModel.getDataset(dataset_id, function(err, dataset) {
     if( ! err ) {
       dataset.collisionHandler = fn;
     }
@@ -72,7 +72,7 @@ exports.handleCollision = function(dataset_id, fn) {
 };
 
 exports.listCollisions = function(dataset_id, fn) {
-  getDataset(dataset_id, function(err, dataset) {
+  DataSetModel.getDataset(dataset_id, function(err, dataset) {
     if( ! err ) {
       dataset.collisionLister = fn;
     }
@@ -80,7 +80,7 @@ exports.listCollisions = function(dataset_id, fn) {
 };
 
 exports.removeCollision = function(dataset_id, fn) {
-  getDataset(dataset_id, function(err, dataset) {
+  DataSetModel.getDataset(dataset_id, function(err, dataset) {
     if( ! err ) {
       dataset.collisionRemover = fn;
     }
@@ -100,7 +100,7 @@ function initDataset(dataset_id, options, cb) {
 
   setLogger(dataset_id, datasetConfig);
 
-  createDataset(dataset_id, function(err, dataset) {
+  DataSetModel.createDataset(dataset_id, function(err, dataset) {
     if( err ) {
       return cb(err, null);
     }
@@ -110,41 +110,11 @@ function initDataset(dataset_id, options, cb) {
 }
 
 function stopDatasetSync(dataset_id, cb) {
-  doLog(dataset_id, 'info', 'stopDatasetSync');
-  getDataset(dataset_id, function(err, dataset) {
-    if( err ) {
-      return cb(err);
-    }
-
-    if( dataset.timeouts ) {
-      for( i in dataset.timeouts ) {
-        clearTimeout(dataset.timeouts[i]);
-      }
-    }
-
-    removeDataset(dataset_id, cb);
-  });
+  DataSetModel.stopDatasetSync(dataset_id, cb);
 }
 
 function stopAllDatasetSync(cb) {
-  doLog(SYNC_LOGGER, 'info', 'stopAllDatasetSync');
-
-  var stoppingDatasets = [];
-  for( var dsId in datasets ) {
-    if( datasets.hasOwnProperty(dsId) ) {
-      stoppingDatasets.push(datasets[dsId]);
-    }
-  }
-
-  var stoppedDatasets = [];
-
-  async.forEachSeries(stoppingDatasets, function(dataset, itemCallback) {
-      stoppedDatasets.push(dataset.id);
-      stopDatasetSync(dataset.id, itemCallback);
-    },
-    function(err) {
-      cb(err, stoppedDatasets);
-    });
+  DataSetModel.stopAllDatasetSync(cb);
 }
 
 function doInvoke(dataset_id, params, callback) {
@@ -167,7 +137,7 @@ function doInvoke(dataset_id, params, callback) {
 }
 
 function doListCollisions(dataset_id, params, cb) {
-  getDataset(dataset_id, function(err, dataset) {
+  DataSetModel.getDataset(dataset_id, function(err, dataset) {
     if( err ) return cb(err);
 
     if( ! dataset.collisionLister ) {
@@ -179,7 +149,7 @@ function doListCollisions(dataset_id, params, cb) {
 }
 
 function doRemoveCollision(dataset_id, params, cb) {
-  getDataset(dataset_id, function(err, dataset) {
+  DataSetModel.getDataset(dataset_id, function(err, dataset) {
     if( err ) return cb(err);
 
     if( ! dataset.collisionRemover ) {
@@ -694,7 +664,7 @@ var DataSetModel = (function() {
         return cb("unknown_dataset - " + dataset_id, null);
       }
       else {
-        var dataset = datasets[dataset_id];
+        var dataset = self.datasets[dataset_id];
         if( ! dataset ) {
           return cb("unknown_dataset - " + dataset_id, null);
         }
@@ -727,6 +697,38 @@ var DataSetModel = (function() {
       delete self.datasets[dataset_id];
 
       cb(null, {});
+    },
+
+    stopDatasetSync : function(dataset_id, cb) {
+      doLog(dataset_id, 'info', 'stopDatasetSync');
+      self.getDataset(dataset_id, function(err, dataset) {
+        if( err ) {
+          return cb(err);
+        }
+
+        self.removeDataset(dataset_id, cb);
+      });
+    },
+
+    stopAllDatasetSync : function(cb) {
+      doLog(SYNC_LOGGER, 'info', 'stopAllDatasetSync');
+
+      var stoppingDatasets = [];
+      for( var dsId in self.datasets ) {
+        if( self.datasets.hasOwnProperty(dsId) ) {
+          stoppingDatasets.push(self.datasets[dsId]);
+        }
+      }
+
+      var stoppedDatasets = [];
+
+      async.forEachSeries(stoppingDatasets, function(dataset, itemCallback) {
+        stoppedDatasets.push(dataset.id);
+        self.stopDatasetSync(dataset.id, itemCallback);
+      },
+      function(err) {
+        cb(err, stoppedDatasets);
+      });
     },
 
     getOrCreateDatasetClient : function(dataset_id, query_params, meta_data, cb) {
@@ -767,7 +769,7 @@ var DataSetModel = (function() {
       })
     },
 
-    createDatasetClient : function(dataset_id, query_params, meta_data, config, cb) {
+    createDatasetClient : function(dataset_id, query_params, meta_data, cb) {
       self.getDataset(dataset_id, function(err, dataset) {
         if( err ) return err;
         var clientHash = self.getClientHash(query_params, meta_data);
@@ -779,7 +781,6 @@ var DataSetModel = (function() {
             created : new Date().getTime(),
             queryParams : query_params,
             metaData : meta_data,
-            config : config,
             syncRunning : false,
             syncPending : true,
             syncActive : true,
@@ -923,6 +924,8 @@ var DataSetModel = (function() {
   init();
 
   return {
+    stopDatasetSync : self.stopDatasetSync,
+    stopAllDatasetSync : self.stopAllDatasetSync,
     getOrCreateDatasetClient: self.getOrCreateDatasetClient,
     getDataset : self.getDataset,
     createDataset : self.createDataset,
