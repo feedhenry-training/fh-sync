@@ -207,10 +207,10 @@ function doClientSync(dataset_id, params, callback) {
         else {
           if( datasetClient.data.hash ) {
             // No pending updates, just sync client dataset
-            doLog(dataset_id, 'verbose', 'doClientSync - No pending - Hash (Client :: Cloud) = ' + params.dataset_hash + ' :: ' + datasetClient.data.hash, params);
+            //doLog(dataset_id, 'verbose', 'doClientSync - No pending - Hash (Client :: Cloud) = ' + params.dataset_hash + ' :: ' + datasetClient.data.hash, params);
 
             if( datasetClient.data.hash === params.dataset_hash) {
-              doLog(dataset_id, 'verbose', 'doClientSync - No pending - Hashes match. Just return hash');
+              doLog(dataset_id, 'verbose', 'doClientSync - No pending - Hashes match. Just return hash', params);
               var res = {"hash": datasetClient.hash};
               returnUpdates(dataset_id, params, res, callback);
             }
@@ -222,7 +222,7 @@ function doClientSync(dataset_id, params, callback) {
             }
           } else {
             doLog(dataset_id, 'verbose', 'No pending records. No cloud data set - invoking list on back end system', params);
-            DataSetModel.syncDatasetClient(dataset_id, params.query_params, params.meta_data, function(err, res) {
+            DataSetModel.syncDatasetClientObj(datasetClient, function(err, res) {
               if( err ) callback(err);
               returnUpdates(dataset_id, params, res, callback);
             });
@@ -372,7 +372,7 @@ function processPending(dataset_id, dataset, params, cb) {
 }
 
 function returnUpdates(dataset_id, params, resIn, cb) {
-  doLog(dataset_id, 'verbose', 'START returnUpdates', params);
+  //doLog(dataset_id, 'verbose', 'START returnUpdates', params);
   doLog(dataset_id, 'silly', 'returnUpdates - existing res = ' + util.inspect(resIn), params);
   var cuid = getCuid(params);
   $fh.db({
@@ -478,7 +478,7 @@ function doSyncRecords(dataset_id, params, callback) {
     return callback("no_query_params", null);
   }
 
-  DataSetModel.getDatasetClient(dataset_id, params.query_params, params.meta_data, function(err, datasetClient) {
+  DataSetModel.getOrCreateDatasetClient(dataset_id, params.query_params, params.meta_data, function(err, datasetClient) {
     if( err ) {
       return callback(err, null);
     }
@@ -527,7 +527,7 @@ function doSyncRecords(dataset_id, params, callback) {
       var res = {"create": creates, "update": updates, "delete":deletes, "hash":dataset.syncLists[queryHash].hash};
       callback(null, res);
     } else {
-      DataSetModel.syncDatasetClient(datasetClient, callback);
+      DataSetModel.syncDatasetClientObj(datasetClient, callback);
     }
   });
 }
@@ -620,7 +620,7 @@ var loggers = {};
 // CONFIG
 var defaults = {
   "sync_frequency": 10,
-  "logLevel" : "info"
+  "logLevel" : "verbose"
 };
 
 // Functions which can be invoked through sync.doInvoke
@@ -637,8 +637,6 @@ var invokeFunctions = {
 /* =================== INITIALISATION ==================== */
 /* ======================================================= */
 setLogger(SYNC_LOGGER, {logLevel : defaults.logLevel});
-
-
 
 
 /* ======================================================= */
@@ -735,7 +733,7 @@ var DataSetModel = (function() {
       self.getDataset(dataset_id, function(err, dataset) {
         if( err ) return err;
         var clientHash = self.getClientHash(query_params, meta_data);
-        var datasetClient = dataset[clientHash];
+        var datasetClient = dataset.clients[clientHash];
         if( ! datasetClient ) {
           return self.createDatasetClient(dataset_id, query_params, meta_data, cb);
         }
@@ -749,7 +747,8 @@ var DataSetModel = (function() {
       if( datasetClient && datasetClient.id && datasetClient.datasetId) {
         self.getDataset(datasetClient.datasetId, function(err, dataset) {
           if(err) return cb(err);
-          var dsc = dataset[datasetClient.id];
+          var dsc = dataset.clients[datasetClient.id];
+
           if( ! dsc ) return cb('Unknown datasetClient');
           return cb(null, dsc);
         });
@@ -763,17 +762,17 @@ var DataSetModel = (function() {
       self.getDataset(dataset_id, function(err, dataset) {
       if( err ) return err;
         var clientHash = self.getClientHash(query_params, meta_data);
-        var datasetClient = dataset[clientHash];
+        var datasetClient = dataset.clients[clientHash];
         if( ! datasetClient ) return cb('Unknown dataset client for dataset_id ' + dataset_id);
         return cb(null, datasetClient);
-      })
+      });
     },
 
     createDatasetClient : function(dataset_id, query_params, meta_data, cb) {
       self.getDataset(dataset_id, function(err, dataset) {
         if( err ) return err;
         var clientHash = self.getClientHash(query_params, meta_data);
-        var datasetClient = dataset[clientHash];
+        var datasetClient = dataset.clients[clientHash];
         if( ! datasetClient ) {
           datasetClient = {
             id : clientHash,
@@ -787,15 +786,16 @@ var DataSetModel = (function() {
             pendingCallbacks : [],
             data : {}
           };
-          dataset[clientHash] = datasetClient;
+          dataset.clients[clientHash] = datasetClient;
         }
+        doLog(dataset_id, 'verbose', 'createDatasetClient :: ' + util.inspect(datasetClient));
         return cb(null, datasetClient);
-      })
+      });
     },
 
     removeDatasetClient : function(datasetClient, cb) {
       if( datasetClient && datasetClient.id ) {
-        delete dataset[datasetClient.id];
+        delete dataset.clients[datasetClient.id];
       }
       cb();
     },
@@ -824,11 +824,15 @@ var DataSetModel = (function() {
     },
 
     doSyncList : function(dataset, datasetClient, cb) {
+      datasetClient.syncPending = false;
+      datasetClient.syncRunning = true;
+      datasetClient.syncLoopStart = new Date().getTime();
+
       if( ! dataset.listHandler ) {
         return cb("no_listHandler", null);
       }
 
-      dataset.listHandler(dataset_id, datasetClient.query_params, function(err, records) {
+      dataset.listHandler(dataset.id, datasetClient.query_params, function(err, records) {
         if( err ) return cb(err);
 
 
@@ -849,24 +853,28 @@ var DataSetModel = (function() {
         doLog(dataset.id, 'verbose', 'doSyncList cb ' + ( cb != undefined) + ' - Global Hash (prev :: cur) = ' + previousHash + ' ::  ' + globalHash);
 
         datasetClient.data = {"records" : recOut, "hash": globalHash};
+
+        datasetClient.syncRunning = false;
+        datasetClient.syncLoopEnd = new Date().getTime();
         if( cb ) {
           cb(null, datasetClient.data);
         }
-      }, meta_data);
+      }, datasetClient.metaData);
     },
 
     doSyncLoop : function() {
       for( var dataset_id in self.datasets ) {
         if( self.datasets.hasOwnProperty(dataset_id) ) {
           var dataset = self.datasets[dataset_id];
-          for( var datasetClient in dataset ) {
-            if( dataset.hasOwnProperty(datasetClient) ) {
+          for( var datasetClientId in dataset.clients ) {
+            if( dataset.clients.hasOwnProperty(datasetClientId) ) {
+              var datasetClient = dataset.clients[datasetClientId];
               if( !datasetClient.syncRunning && datasetClient.syncActive) {
                 // Check to see if it is time for the sync loop to run again
                 var lastSyncStart = datasetClient.syncLoopStart;
                 var lastSyncCmp = datasetClient.syncLoopEnd;
                 if( lastSyncStart == null ) {
-                  doLog(dataset_id, 'debug', 'Performing initial sync');
+                  doLog(dataset_id, 'verbose', 'Performing initial sync');
                   // Dataset has never been synced before - do initial sync
                   datasetClient.syncPending = true;
                 } else if (lastSyncCmp != null) {
@@ -879,6 +887,7 @@ var DataSetModel = (function() {
                 }
 
                 if( datasetClient.syncPending ) {
+                  doLog(dataset_id, 'verbose', 'running sync for client ' + datasetClient.id);
                   // If the dataset requres syncing, run the sync loop. This may be because the sync interval has passed
                   // or because the sync_frequency has been changed or because the syncPending flag was deliberately set
                   self.doSyncList(dataset, datasetClient, function(err, res) {
@@ -886,7 +895,7 @@ var DataSetModel = (function() {
                     // Check if there are aby pending callbacks for this sync Client;
                     var pendingCallbacks = datasetClient.pendingCallbacks;
                     datasetClient.pendingCallbacks = [];
-                    for( var i = 0; i < pendingCallbacks.length(); i++) {
+                    for( var i = 0; i < pendingCallbacks.length; i++) {
                       var cb = pendingCallbacks[i];
 
                       // Use process.nextTick so we can complete the syncLoop before all the callbacks start to fire
