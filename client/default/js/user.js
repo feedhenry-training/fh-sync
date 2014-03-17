@@ -3,12 +3,17 @@ var syncUser = (function() {
   var self = {
 
     syncTable: undefined,
+    syncMessages : [],
+    syncMessageLimit : 100,
+    syncFrequency : 5,
+    contentsHash: undefined,
 
     init: function() {
       // Ensure UI is set up correctly
       $('#updateBtn').attr('disabled', 'disabled');
 
       $('#isOnlineChk').unbind().click(self.setOnline);
+      $('#isActiveChk').unbind().click(self.setActive);
       $('#updateBtn').unbind().click(self.updateItem);
       $('#addBtn').unbind().click(self.addItem);
       $('#syncDelayBtn').unbind().click(self.setSyncDelay);
@@ -38,7 +43,7 @@ var syncUser = (function() {
 
       // Initialise the Sync Service. See http://docs.feedhenry.com/v2/api_js_client_api.html#$fh.sync for details on initialisation options
       sync.init({
-        "sync_frequency": 5,
+        "sync_frequency": self.syncFrequency,
         "do_console_log" : true
       });
 
@@ -47,7 +52,7 @@ var syncUser = (function() {
 
       // Get the Sync service to manage the dataset called "myShoppingList"
       sync.manage(datasetId, null, null, null, function() {
-        console.log('Data set managed - getting query params and meta data');
+        console.log('Data set managed - syncFrequency = ' + self.syncFrequency);
         sync.getMetaData(datasetId, function(meta_data) {
 
           var localMetaData = JSON.parse(JSON.stringify(meta_data));
@@ -73,7 +78,16 @@ var syncUser = (function() {
 
     handleSyncNotifications: function(notification) {
       var msg = moment().format('YYYY-MM-DD HH:mm:ss') + ' : ' + notification.code + ' (uid:' + notification.uid + ', msg:' + notification.message + ')\n';
-      $('#notifications').val(msg + $('#notifications').val());
+      self.syncMessages.push(msg);
+      var start = self.syncMessages.length > self.syncMessageLimit ? self.syncMessages.length - self.syncMessageLimit : 0;
+      self.syncMessages = self.syncMessages.splice(start, self.syncMessages.length);
+
+      var notifications = "";
+      for(var i=self.syncMessages.length -1; i >=0; i--) {
+        notifications = notifications + i + ') ' + self.syncMessages[i];
+      }
+
+      $('#notifications').val(notifications);
 
       if( 'sync_complete' == notification.code ) {
         datasetHash = notification.uid;
@@ -94,6 +108,7 @@ var syncUser = (function() {
 
     clearNotifications: function() {
       $('#notifications').val('');
+      self.syncMessages = [];
     },
 
     handleListSuccess: function(res) {
@@ -235,6 +250,14 @@ var syncUser = (function() {
         return;
       }
 
+      var contentsHash = self.generateHash(contents);
+
+      if( contentsHash === self.contentsHash) {
+        return;
+      }
+
+      self.contentsHash = contentsHash;
+
       // show the table & hide the no data message
       $('#nosyncdata').hide();
       $('#table').show();
@@ -245,15 +268,14 @@ var syncUser = (function() {
         "bFilter": false,
         "aaData": contents,
         "aoColumns": [
-          { "sTitle": "UID", "sWidth": "150" },
-          { "sTitle": "Item Text" },
-          { "sTitle": "Date Created", "sWidth": "300" },
-          { "sTitle": "Controls", "bSortable": false, "sClass": "controls", "sWidth": "150" }
+          { "sTitle": "UID", "sWidth": "110"},
+          { "sTitle": "Item" },
+          { "sTitle": "Date Created", "sWidth": "90" },
+          { "sTitle": "Controls", "bSortable": false, "sClass": "controls", "sWidth": "100" }
         ]
       });
 
       $('tr td .edit, tr td .delete, tr td:not(.controls,.dataTables_empty)').unbind().click(function() {
-        var row = $(this).parent().parent();
         var data = self.syncTable.fnGetData($(this).closest('tr').get(0));
 
         if($(this).hasClass('edit')) {
@@ -302,7 +324,53 @@ var syncUser = (function() {
       navigator.network = navigator.network || {};
       navigator.network.connection = navigator.network.connection || {}
       navigator.network.connection.type = isOnline ? 'WiFi' : 'none';
-    }
+    },
+
+    setActive: function() {
+      var isActive = $('#isActiveChk').is(":checked")
+      console.log('Setting active to ' + isActive);
+      if( isActive ) {
+        $fh.sync.startSync(datasetId);
+      } else {
+        $fh.sync.stopSync(datasetId);
+      }
+
+    },
+
+    sortObject : function(object) {
+      if (typeof object !== "object" || object === null) {
+        return object;
+      }
+
+      var result = [];
+
+      Object.keys(object).sort().forEach(function(key) {
+        result.push({
+          key: key,
+          value: self.sortObject(object[key])
+        });
+      });
+
+      return result;
+    },
+
+    sortedStringify : function(obj) {
+
+      var str = '';
+
+      try {
+        str = JSON.stringify(self.sortObject(obj));
+      } catch (e) {
+        console.error('Error stringifying sorted object:' + e);
+      }
+
+      return str;
+    },
+
+    generateHash: function(object) {
+      var hash = CryptoJS.SHA1(self.sortedStringify(object));
+      return hash.toString();
+    },
   };
 
   return {

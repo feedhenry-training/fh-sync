@@ -367,15 +367,19 @@ $fh.sync = (function() {
       }
     },
 
-    startSync: function(dataset_id, success, failure) {
-      self.setConfig(dataset_id, {"sync_active" : true}, function() {
-        success();
+    stopSync: function(dataset_id, success, failure) {
+      self.setConfig(dataset_id, {"sync_active" : false}, function() {
+        if( success ) {
+          success();
+        }
       }, failure);
     },
 
-    stopSync: function(dataset_id, success, failure) {
-      self.setConfig(dataset_id, {"sync_active" : false}, function() {
-        success();
+    startSync: function(dataset_id, success, failure) {
+      self.setConfig(dataset_id, {"sync_active" : true}, function() {
+        if( success ) {
+          success();
+        }
       }, failure);
     },
 
@@ -1137,7 +1141,7 @@ $fh.sync = (function() {
     setMetaData: self.setMetaData,
     getConfig: self.getConfig,
     setConfig: self.setConfig,
-    stopSync: self.stopSync,
-    startSync: self.startSync
+    startSync: self.startSync,
+    stopSync: self.stopSync
   };
 })();

@@ -1,6 +1,7 @@
 body {
   -webkit-font-smoothing: antialiased;
   background: #e2e6e9;
+  font-size: 11px;
 }
 
 h3 {
@@ -132,10 +133,6 @@ h4.center {
   disabled: true;
 }
 
-#online {
-    padding: 5px;
-}
-
 #updater {
     padding-top: 5px;
 }
@@ -179,7 +176,7 @@ h4.center {
 
 #addBtn, #updateBtn, #syncDelayBtn, #recordDelayBtn, #queryParamsBtn, #metaDataBtn {
   margin-top: -10px;
-    width: 75px;
+    width: 60px;
 }
 
 .json-editor .item {
@@ -192,6 +189,18 @@ h4.center {
     border: 3px solid brown;
     padding: 3px;
     border-radius: 7px;
+}
+
+.btn {
+  font-size: 11px;
+}
+
+#shoppingList_wrapper .btn {
+  padding: 1px 5px 1px 5px;
+}
+
+#notifications {
+  font-size: 11px;
 }
 
 .btnCopyPre {
@@ -209,3 +218,27 @@ h4.center {
 #collisions_editor .bottom-pad {
   padding-bottom: 32px;
 }
+
+table.dataTable td {
+    padding: 2px 5px;
+}
+
+#controls #active {
+    float: left;
+}
+
+#controls #online {
+    float: right;
+}
+
+#controls form {
+    margin: 0;
+}
+
+#controls div {
+    padding: 3px;
+}
+#controls #active {
+ padding-right: 40px;
+}
+

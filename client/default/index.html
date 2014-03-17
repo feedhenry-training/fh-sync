@@ -15,14 +15,25 @@
             <ul class="nav nav-tabs">
               <li class="active"><a href="#enduser" id="tabSync" data-toggle="tab">End User</a></li>
               <li ><a href="#collisions" id="tabCollision" data-toggle="tab">Administrator</a></li>
-              <div id="online" class="right">
-                <form class="form-inline">
-                  <label class="checkbox">
-                    <input type="checkbox" checked="checked" name="isOnline" id="isOnlineChk"> Online
-                  </label>
-                  <a class="btn btn-mini pull-right" href="#" rel="popover" data-placement="left" data-trigger="hover" data-content="Check to simulate being off line. This is useful for generating data colissions (updating a stale record)" data-original-title="Simulate Offline"><i class="icon-question-sign"></i></a>
-                  <span class="help-inline"></span>
-                </form>
+              <div id="controls" class="right">
+                <div id="active" class="inline-control">
+                  <form class="form-inline">
+                    <label class="checkbox">
+                      <input type="checkbox" checked="checked" name="isActive" id="isActiveChk"> Sync Active
+                    </label>
+                    <a class="btn btn-mini pull-right" href="#" rel="popover" data-placement="left" data-trigger="hover" data-content="Use to enable/disable synchronization with cloud." data-original-title="Sync Active"><i class="icon-question-sign"></i></a>
+                    <span class="help-inline"></span>
+                  </form>
+                </div>
+                <div id="online" class="inline-control">
+                  <form class="form-inline">
+                    <label class="checkbox">
+                      <input type="checkbox" checked="checked" name="isOnline" id="isOnlineChk"> Online
+                    </label>
+                    <a class="btn btn-mini pull-right" href="#" rel="popover" data-placement="left" data-trigger="hover" data-content="Check to simulate being off line. This is useful for generating data colissions (updating a stale record)" data-original-title="Simulate Offline"><i class="icon-question-sign"></i></a>
+                    <span class="help-inline"></span>
+                  </form>
+                </div>
               </div>
             </ul>
           </div>
@@ -45,12 +56,12 @@
 
                 <div class="recordMod">
                   <span id="adder">
-                    <input type="text" placeholder="Add New Item" class="input-xlarge" id="itemIn" name="itemIn" />
+                    <input type="text" placeholder="Add New Item" class="input-large" id="itemIn" name="itemIn" />
                     <button id="addBtn" class="btn btn-primary" type="button">Add</button>
                   </span>
 
                   <span id="updater">
-                    <input type="text" placeholder="Select an Item from the list to update" class="input-xlarge" id="itemUp" name="itemUp" />
+                    <input type="text" placeholder="Select an Item from the list to update" class="input- large" id="itemUp" name="itemUp" />
                     <input type="hidden" id="itemUpId"/>
                     <button id="updateBtn" class="btn btn-primary">Update</button>
                   </span>
@@ -64,9 +75,9 @@
                     Meta Data - is passed to the cloud for all deltas (create, update & delete). This can be used to send any additional information required to complete the delta operation - e.g. user id, auth tokens etc. <br/>
                   </p>
 
-                  <input type="text" placeholder="Query Params - JSON format" class="input-xlarge" id="queryParams" name="queryParams" />
+                  <input type="text" placeholder="Query Params - JSON format" class="input-large" id="queryParams" name="queryParams" />
                   <button id="queryParamsBtn" class="btn btn-primary">Set</button>
-                  <input type="text" placeholder="Meta Data - JSON format" class="input-xlarge" id="metaData" name="metaData" />
+                  <input type="text" placeholder="Meta Data - JSON format" class="input-large" id="metaData" name="metaData" />
                   <button id="metaDataBtn" class="btn btn-primary">Set</button>
                 </div>
 
@@ -79,9 +90,9 @@
                     Record Delay - number of seconds to delay record operation (create, update &delete) in the cloud.<br/>
                   </p>
 
-                  <input type="text" placeholder="Sync Delay" class="input-xlarge" id="syncDelay" name="syncDelay" />
+                  <input type="text" placeholder="Sync Delay" class="input-large" id="syncDelay" name="syncDelay" />
                   <button id="syncDelayBtn" class="btn btn-primary">Set</button>
-                  <input type="text" placeholder="Record Delay" class="input-xlarge" id="recordDelay" name="recordDelay" />
+                  <input type="text" placeholder="Record Delay" class="input-large" id="recordDelay" name="recordDelay" />
                   <button id="recordDelayBtn" class="btn btn-primary">Set</button>
                 </div>
 
