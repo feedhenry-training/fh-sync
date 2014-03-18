@@ -70,6 +70,8 @@ $fh.sync = (function() {
 
     notify_callback: undefined,
 
+    hasSyncMBaaS : true,
+
     // PUBLIC FUNCTION IMPLEMENTATIONS
     init: function(options) {
       self.consoleLog('sync - init called');
@@ -78,6 +80,8 @@ $fh.sync = (function() {
       for (var i in options) {
         self.config[i] = options[i];
       }
+
+      self.checkHasSyncMBaaS();
       self.datasetMonitor();
     },
 
@@ -213,8 +217,8 @@ $fh.sync = (function() {
 
     listCollisions : function(dataset_id, success, failure){
       self.getDataSet(dataset_id, function(dataset) {
-        $fh.act({
-          "act": dataset_id,
+        self.doCloudCall({
+          "dataset_id": dataset_id,
           "req": {
             "fn": "listCollisions",
             "meta_data" : dataset.meta_data
@@ -225,15 +229,15 @@ $fh.sync = (function() {
 
     removeCollision: function(dataset_id, colissionHash, success, failure) {
       self.getDataSet(dataset_id, function(dataset) {
-        $fh.act({
-          "act": dataset_id,
+        self.doCloudCall({
+          "dataset_id" : dataset_id,
           "req": {
             "fn": "removeCollision",
             "hash": colissionHash,
             meta_data: dataset.meta_data
           }
         }, success, failure);
-      }, failure);
+      });
     },
 
 
@@ -522,8 +526,8 @@ $fh.sync = (function() {
               self.consoleLog('Starting sync loop - global hash = ' + dataSet.hash + ' :: params = ' + JSON.stringify(syncLoopParams, null, 2));
             }
             try {
-              $fh.act({
-                'act': dataset_id,
+              self.doCloudCall({
+                'dataset_id': dataset_id,
                 'req': syncLoopParams
               }, function(res) {
                 var rec;
@@ -569,7 +573,7 @@ $fh.sync = (function() {
                   dataSet.acknowledgements = acknowledgements;
                 }
 
-                else if (res.hash && res.hash !== dataSet.hash) {
+                if (!res.records && res.hash && res.hash !== dataSet.hash) {
                   self.consoleLog("Local dataset stale - syncing records :: local hash= " + dataSet.hash + " - remoteHash=" + res.hash);
                   // Different hash value returned - Sync individual records
                   self.syncRecords(dataset_id);
@@ -617,8 +621,8 @@ $fh.sync = (function() {
 
         self.consoleLog("syncRecParams :: " + JSON.stringify(syncRecParams));
 
-        $fh.act({
-          'act': dataset_id,
+        self.doCloudCall({
+          'dataset_id': dataset_id,
           'req': syncRecParams
         }, function(res) {
           var i;
@@ -695,6 +699,51 @@ $fh.sync = (function() {
             }
           }
         }
+      }
+    },
+
+    checkHasSyncMBaaS : function() {
+      self.hasSyncMBaaS = false;
+      return;
+      console.log('starting check has mbaas');
+
+      $fh.mbaas({
+        'url' : '/mbaas/sync/test',
+        'method' : 'post',
+        'data' : {}
+      }, function(res) {
+        // If the sync rout is not there, the mBaaS will respond with a 200 and the following message:
+        // "Only POST to supported mBaaS APIs are supported. See http://docs.feedhenry.com for more"
+        console.log('checkHasSyncMBaaS - success - ', res);
+        self.hasSyncMBaaS = true;
+      }, function(err) {
+        // If the sync rout *is* there, and the "fn" parameter is not passed, the sync service will respond
+        // with an error syating "no_fn"
+        console.log('checkHasSyncMBaaS - failure - ', err);
+        self.hasSyncMBaaS = false;
+      });
+    },
+
+    doCloudCall: function(params, success, failure) {
+      if( self.hasSyncMBaaS ) {
+        $fh.mbaas({
+          'url' : '/mbaas/sync/' + params.dataset_id,
+          'method' : 'post',
+          'data' : params.req
+        }, function(res) {
+          success(res);
+        }, function(err, msg) {
+          failure(err, msg)
+        })
+      } else {
+        $fh.act({
+          'act' : params.dataset_id,
+          'req' : params.req
+        }, function(res) {
+          success(res);
+        }, function(err, msg) {
+          failure(err, msg)
+        });
       }
     },
 
