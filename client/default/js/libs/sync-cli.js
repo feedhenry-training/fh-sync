@@ -383,6 +383,22 @@ $fh.sync = (function() {
       }, failure);
     },
 
+    doSync: function(dataset_id, success, failure) {
+      var dataset = self.datasets[dataset_id];
+
+      if (dataset) {
+        dataset.syncPending = true;
+        self.saveDataSet(dataset_id);
+        if( success ) {
+          success();
+        }
+      } else {
+        if( failure ) {
+          failure('unknown_dataset ' + dataset_id, dataset_id);
+        }
+      }
+    },
+
     sortObject : function(object) {
       if (typeof object !== "object" || object === null) {
         return object;
@@ -477,7 +493,7 @@ $fh.sync = (function() {
 
         self.isOnline(function(online) {
           if (!online) {
-            self.syncComplete(dataset_id, "offline");
+            self.syncComplete(dataset_id, "offline", self.notifications.SYNC_FAILED);
           } else {
             var syncLoopParams = {};
             syncLoopParams.fn = 'sync';
@@ -560,20 +576,19 @@ $fh.sync = (function() {
                 } else {
                   self.consoleLog("Local dataset up to date");
                 }
-                self.syncComplete(dataset_id,  "online");
+                self.syncComplete(dataset_id,  "online", self.notifications.SYNC_COMPLETE);
               }, function(msg, err) {
                 // The AJAX call failed to complete succesfully, so the state of the current pending updates is unknown
                 // Mark them as "crashed". The next time a syncLoop completets successfully, we will review the crashed
                 // records to see if we can determine their current state.
                 self.markInFlightAsCrashed(dataSet);
                 self.consoleLog("syncLoop failed : msg=" + msg + " :: err = " + err);
-                self.doNotify(dataset_id, null, self.notifications.SYNC_FAILED, msg);
-                self.syncComplete(dataset_id,  msg);
+                self.syncComplete(dataset_id, msg, self.notifications.SYNC_FAILED);
               });
             }
             catch (e) {
               self.consoleLog('Error performing sync - ' + e);
-              self.syncComplete(dataset_id, e);
+              self.syncComplete(dataset_id, e, self.notifications.SYNC_FAILED);
             }
           }
         });
@@ -632,21 +647,21 @@ $fh.sync = (function() {
           if(res.hash) {
             dataSet.hash = res.hash;
           }
-          self.syncComplete(dataset_id, "online");
+          self.syncComplete(dataset_id, "online", self.notifications.SYNC_COMPLETE);
         }, function(msg, err) {
           self.consoleLog("syncRecords failed : msg=" + msg + " :: err=" + err);
-          self.syncComplete(dataset_id, msg);
+          self.syncComplete(dataset_id, msg, self.notifications.SYNC_FAILED);
         });
       });
     },
 
-    syncComplete: function(dataset_id, status) {
+    syncComplete: function(dataset_id, status, notification) {
 
       self.getDataSet(dataset_id, function(dataset) {
         dataset.syncRunning = false;
         dataset.syncLoopEnd = new Date().getTime();
         self.saveDataSet(dataset_id);
-        self.doNotify(dataset_id, dataset.hash, self.notifications.SYNC_COMPLETE, status);
+        self.doNotify(dataset_id, dataset.hash, notification, status);
       });
     },
 
@@ -1142,6 +1157,7 @@ $fh.sync = (function() {
     getConfig: self.getConfig,
     setConfig: self.setConfig,
     startSync: self.startSync,
-    stopSync: self.stopSync
+    stopSync: self.stopSync,
+    doSync: self.doSync
   };
 })();

@@ -200,12 +200,10 @@ var syncUser = (function() {
         return;
       }
 
-      // Store the sync delay as a query param
-      queryParamsJson.syncDelay = $('#syncDelay').val();
-      queryParamsJson.recordDelay = $('#recordDelay').val();
-
-
-      sync.setQueryParams(datasetId, queryParamsJson);
+      sync.setQueryParams(datasetId, queryParamsJson, function() {
+        // Trigger a sync event immediately
+        sync.doSync(datasetId);
+      });
     },
 
     setMetaData: function() {
@@ -221,38 +219,23 @@ var syncUser = (function() {
       metaDataJson.syncDelay = $('#syncDelay').val();
       metaDataJson.recordDelay = $('#recordDelay').val();
 
-
-      sync.getMetaData(datasetId, function(res1) {
-        console.log('current sync meta data = ', res1);
-        sync.setMetaData(datasetId, metaDataJson, function(res2) {
-          console.log('set sync meta data to ', res2);
-          sync.getMetaData(datasetId, function(res3) {
-            console.log('sync meta data is now ', res3);
-          }, function(err1) {
-            console.log('ERROR: error calling getMetaData (1) : ', err1);
-          });
-        }, function(err2) {
-          console.log('ERROR: error calling setMetaData (2) : ', err2);
-        });
-      }, function(err3) {
-        console.log('ERROR: error calling getMetaData (3) : ', err3);
+      sync.setMetaData(datasetId, metaDataJson, function() {
+        // Trigger a sync event immediately
+        sync.doSync(datasetId);
       });
-
-
-//      sync.setMetaData(datasetId, metaDataJson);
     },
 
 
     reloadTable: function(contents) {
-      if( contents.length == 0 ) {
-        $('#nosyncdata').show();
-        $('#table').hide();
-        return;
-      }
-
       var contentsHash = self.generateHash(contents);
 
       if( contentsHash === self.contentsHash) {
+        return;
+      }
+
+      if( contents.length == 0 ) {
+        $('#nosyncdata').show();
+        $('#table').hide();
         return;
       }
 
@@ -270,7 +253,7 @@ var syncUser = (function() {
         "aoColumns": [
           { "sTitle": "UID", "sWidth": "110"},
           { "sTitle": "Item" },
-          { "sTitle": "Date Created", "sWidth": "90" },
+          { "sTitle": "Date Created", "sWidth": "100" },
           { "sTitle": "Controls", "bSortable": false, "sClass": "controls", "sWidth": "100" }
         ]
       });

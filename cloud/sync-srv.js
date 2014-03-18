@@ -23,6 +23,42 @@ exports.stopAll = function(callback) {
   return stopAllDatasetSync(callback);
 };
 
+exports.globalHandleList = function(fn) {
+  DataSetModel.globalListHandler = fn;
+};
+
+exports.globalHandleCreate = function(fn) {
+  DataSetModel.globalCreateHandler = fn;
+};
+
+exports.globalHandleRead = function(fn) {
+  DataSetModel.globalReadHandler = fn;
+};
+
+exports.globalHandleUpdate = function(fn) {
+  DataSetModel.globalUpdateHandler = fn;
+};
+
+exports.globalHandleDelete = function(fn) {
+  DataSetModel.globalDeleteHandler = fn;
+};
+
+exports.globalHandleCollision = function(fn) {
+  DataSetModel.globalCollisionHandler = fn;
+};
+
+exports.globalListCollisions = function(fn) {
+  DataSetModel.globalCollisionLister = fn;
+};
+
+exports.globalRemoveCollision = function(fn) {
+  DataSetModel.globalCollisionRemover = fn;
+};
+
+exports.globalInterceptRequest = function(fn) {
+  DataSetModel.globalRequestInterceptor = fn;
+};
+
 exports.handleList = function(dataset_id, fn) {
   DataSetModel.getDataset(dataset_id, function(err, dataset) {
     if( ! err ) {
@@ -87,6 +123,86 @@ exports.removeCollision = function(dataset_id, fn) {
   });
 };
 
+exports.interceptRequest = function(dataset_id, fn) {
+  getDataset(dataset_id, function(err, dataset) {
+    if( ! err ) {
+      dataset.requestInterceptor = fn;
+    }
+  });
+};
+
+exports.handleList = function(dataset_id, fn) {
+  DataSetModel.getDataset(dataset_id, function(err, dataset) {
+    if( ! err ) {
+      dataset.listHandler = fn;
+    }
+  });
+};
+
+exports.handleCreate = function(dataset_id, fn) {
+  DataSetModel.getDataset(dataset_id, function(err, dataset) {
+    if( ! err ) {
+      dataset.createHandler = fn;
+    }
+  });
+};
+
+exports.handleRead = function(dataset_id, fn) {
+  DataSetModel.getDataset(dataset_id, function(err, dataset) {
+    if( ! err ) {
+      dataset.readHandler = fn;
+    }
+  });
+};
+
+exports.handleUpdate = function(dataset_id, fn) {
+  DataSetModel.getDataset(dataset_id, function(err, dataset) {
+    if( ! err ) {
+      dataset.updateHandler = fn;
+    }
+  });
+};
+
+exports.handleDelete = function(dataset_id, fn) {
+  DataSetModel.getDataset(dataset_id, function(err, dataset) {
+    if( ! err ) {
+      dataset.deleteHandler = fn;
+    }
+  });
+};
+
+exports.handleCollision = function(dataset_id, fn) {
+  DataSetModel.getDataset(dataset_id, function(err, dataset) {
+    if( ! err ) {
+      dataset.collisionHandler = fn;
+    }
+  });
+};
+
+exports.listCollisions = function(dataset_id, fn) {
+  DataSetModel.getDataset(dataset_id, function(err, dataset) {
+    if( ! err ) {
+      dataset.collisionLister = fn;
+    }
+  });
+};
+
+exports.removeCollision = function(dataset_id, fn) {
+  DataSetModel.getDataset(dataset_id, function(err, dataset) {
+    if( ! err ) {
+      dataset.collisionRemover = fn;
+    }
+  });
+};
+
+exports.interceptRequest = function(dataset_id, fn) {
+  DataSetModel.getDataset(dataset_id, function(err, dataset) {
+    if( ! err ) {
+      dataset.requestInterceptor = fn;
+    }
+  });
+};
+
 /* ======================================================= */
 /* ================== PRIVATE FUNCTIONS ================== */
 /* ======================================================= */
@@ -137,27 +253,11 @@ function doInvoke(dataset_id, params, callback) {
 }
 
 function doListCollisions(dataset_id, params, cb) {
-  DataSetModel.getDataset(dataset_id, function(err, dataset) {
-    if( err ) return cb(err);
-
-    if( ! dataset.collisionLister ) {
-      return cb("no_collisionLister", null);
-    }
-
-    dataset.collisionLister(dataset_id, cb);
-  });
+  DataSetModel.doCollisionLister(dataset_id, cb, params.meta_data);
 }
 
 function doRemoveCollision(dataset_id, params, cb) {
-  DataSetModel.getDataset(dataset_id, function(err, dataset) {
-    if( err ) return cb(err);
-
-    if( ! dataset.collisionRemover ) {
-      return cb("no_collisionRemover", null);
-    }
-
-    dataset.collisionRemover(dataset_id, params.hash, cb);
-  });
+  DataSetModel.doCollisionRemover(dataset_id, params.hash, cb, params.meta_data);
 }
 
 function doSetLogLevel(dataset_id, params, cb) {
@@ -173,17 +273,13 @@ function doSetLogLevel(dataset_id, params, cb) {
 
 function doClientSync(dataset_id, params, callback) {
 
-  // Verify that query_param have been passed
-  if( ! params || ! params.query_params ) {
-    return callback("no_query_params", null);
-  }
+  var dataset
 
-  DataSetModel.getDataset(dataset_id, function(err, dataset) {
-    if( err ) {
-      return callback(err, null);
-    }
-    if( ! dataset.listHandler ) {
-      return callback("no_listHandler", null);
+  function clientSyncImpl() {
+
+    // Verify that query_param have been passed
+    if( ! params || ! params.query_params ) {
+      return callback("no_query_params", null);
     }
 
     DataSetModel.getOrCreateDatasetClient(dataset_id, params.query_params, params.meta_data, function(err, datasetClient) {
@@ -230,6 +326,31 @@ function doClientSync(dataset_id, params, callback) {
         }
       });
     });
+  }
+
+  DataSetModel.getDataset(dataset_id, function(err, res) {
+    if( err ) {
+      return callback(err, null);
+    }
+    dataset = res;
+
+    if(dataset.requestInterceptor) {
+      var interceptorParams = {
+        "query_params" : params.query_params,
+        "meta_data" : params.meta_data
+      }
+
+      dataset.requestInterceptor(dataset_id, interceptorParams, function(err) {
+        if(err) {
+          return callback(err, null);
+        }
+        else {
+          clientSyncImpl();
+        }
+      });
+    } else {
+      clientSyncImpl()
+    }
   });
 }
 
@@ -275,7 +396,7 @@ function processPending(dataset_id, dataset, params, cb) {
 
     if( "create" === action ) {
       doLog(dataset_id, 'info', 'CREATE Start', params);
-      dataset.createHandler(dataset_id, post, function(err, data) {
+      DataSetModel.doCreateHandler(dataset_id, post, function(err, data) {
         if( err ) {
           doLog(dataset_id, 'warn', 'CREATE Failed - uid=' + uid + ' : err = ' + err, params);
           return addUpdate("failed", "create", hash, uid, err, itemCallback);
@@ -286,7 +407,7 @@ function processPending(dataset_id, dataset, params, cb) {
     }
     else if ( "update" === action ) {
       doLog(dataset_id, 'info', 'UPDATE Start', params);
-      dataset.readHandler(dataset_id, uid, function(err, data) {
+      DataSetModel.doReadHandler(dataset_id, uid, function(err, data) {
         if( err ) {
           doLog(dataset_id, 'warn', 'READ for UPDATE Failed - uid=' + uid + ' : err = ' + err, params);
           return addUpdate("failed", "update", hash, uid, err, itemCallback);
@@ -300,7 +421,7 @@ function processPending(dataset_id, dataset, params, cb) {
         doLog(dataset_id, 'info', 'UPDATE Hash Check ' + uid + ' (client :: dataStore) = ' + preHash + ' :: ' + dataHash, params);
 
         if( preHash === dataHash ) {
-          dataset.updateHandler(dataset_id, uid, post, function(err, data) {
+          DataSetModel.doUpdateHandler(dataset_id, uid, post, function(err, data) {
             if( err ) {
               doLog(dataset_id, 'warn', 'UPDATE Failed - uid=' + uid + ' : err = ' + err, params);
               return addUpdate("failed", "update", hash, uid, err, itemCallback);
@@ -317,7 +438,7 @@ function processPending(dataset_id, dataset, params, cb) {
           }
           else {
             doLog(dataset_id, 'warn', 'UPDATE COLLISION \n Pre record from client:\n' + util.inspect(sortObject(pre)) + '\n Current record from data store:\n' + util.inspect(sortObject(data)), params);
-            dataset.collisionHandler(dataset_id, hash, timestamp, uid, pre, post, meta_data);
+            DataSetModel.doCollisionHandler(dataset_id, hash, timestamp, uid, pre, post, meta_data);
             return addUpdate("collisions", "update", hash, uid, '', itemCallback);
           }
         }
@@ -325,7 +446,7 @@ function processPending(dataset_id, dataset, params, cb) {
     }
     else if ( "delete" === action ) {
       doLog(dataset_id, 'info', 'DELETE Start', params);
-      dataset.readHandler(dataset_id, uid, function(err, data) {
+      DataSetModel.doReadHandler(dataset_id, uid, function(err, data) {
         if( err ) {
           doLog(dataset_id, 'warn', 'READ for DELETE Failed - uid=' + uid + ' : err = ' + err, params);
           return addUpdate("failed", "delete", hash, uid, err, itemCallback);
@@ -345,7 +466,7 @@ function processPending(dataset_id, dataset, params, cb) {
         }
         else {
           if( preHash === dataHash ) {
-            dataset.deleteHandler(dataset_id, uid, function(err, data) {
+            DataSetModel.doDeleteHandler(dataset_id, uid, function(err, data) {
               if( err ) {
                 doLog(dataset_id, 'warn', 'DELETE Failed - uid=' + uid + ' : err = ' + err, params);
                 return addUpdate("failed", "delete", hash, uid, err, itemCallback);
@@ -355,7 +476,7 @@ function processPending(dataset_id, dataset, params, cb) {
             }, meta_data);
           } else {
             doLog(dataset_id, 'warn', 'DELETE COLLISION \n Pre record from client:\n' + util.inspect(sortObject(pre)) + '\n Current record from data store:\n' + util.inspect(sortObject(data)), params);
-            dataset.collisionHandler(dataset_id, hash, timestamp, uid, pre, post, meta_data);
+            DataSetModel.doCollisionHandler(dataset_id, hash, timestamp, uid, pre, post, meta_data);
             return addUpdate("collisions", "delete", hash, uid, '', itemCallback);
           }
         }
@@ -485,7 +606,7 @@ function doSyncRecords(dataset_id, params, callback) {
 
 
     if( datasetClient.data.hash) {
-      // We have a data set for this dataset_id and query hash - compare the uid and hashe values of
+      // We have a data set for this dataset_id and query hash - compare the uid and hash values of
       // our records with the record received
 
       var creates = {};
@@ -532,85 +653,6 @@ function doSyncRecords(dataset_id, params, callback) {
   });
 }
 
-function generateHash(plainText) {
-  var hash;
-  if( plainText ) {
-    if ('string' !== typeof plainText) {
-      plainText = sortedStringify(plainText);
-    }
-    var shasum = crypto.createHash('sha1');
-    shasum.update(plainText);
-    hash = shasum.digest('hex');
-  }
-  return hash;
-}
-
-function sortObject(object) {
-  if (typeof object !== "object" || object === null) {
-    return object;
-  }
-
-  var result = [];
-
-  Object.keys(object).sort().forEach(function(key) {
-    result.push({
-      key: key,
-      value: sortObject(object[key])
-    });
-  });
-
-  return result;
-}
-
-
-function sortedStringify(obj) {
-
-  var str = '';
-
-  try {
-    var soretdObject = sortObject(obj);
-    if(obj) {
-      str = JSON.stringify(sortObject(obj));
-    }
-  } catch (e) {
-    doLog(SYNC_LOGGER, 'error', 'Error stringifying sorted object:' + e);
-    throw e;
-  }
-
-  return str;
-}
-
-function setLogger(dataset_id, options) {
-  var level = options.logLevel;
-  var logger = new (winston.Logger)({
-    transports: [
-      new (winston.transports.Console)({ level: level, debugStdout: true })
-    ]
-  });
-
-  loggers[dataset_id] = logger;
-}
-
-function doLog(dataset_id, level, msg, params) {
-
-  var logger = loggers[dataset_id] || loggers[SYNC_LOGGER];
-  if( logger ) {
-    var logMsg = moment().format('YYYY-MM-DD HH:mm:ss') + ' [' + dataset_id + '] ';
-    logMsg += '(' + getCuid(params)  + ')';
-    logMsg = logMsg + ': ' +msg;
-
-    logger.log(level, logMsg);
-  }
-}
-
-function getCuid(params) {
-  var cuid = '';
-  if( params && params.__fh && params.__fh.cuid ) {
-    cuid = params.__fh.cuid;
-  }
-  return cuid;
-}
-
 /* ======================================================= */
 /* ================== PRIVATE VARIABLES ================== */
 /* ======================================================= */
@@ -620,6 +662,7 @@ var loggers = {};
 // CONFIG
 var defaults = {
   "sync_frequency": 10,
+  "client_sync_timeout" : 15,
   "logLevel" : "verbose"
 };
 
@@ -640,12 +683,21 @@ setLogger(SYNC_LOGGER, {logLevel : defaults.logLevel});
 
 
 /* ======================================================= */
-/* =================== DataSets Object ==================== */
+/* =================== DataSet Object ==================== */
 /* ======================================================= */
-
 var DataSetModel = (function() {
 
   var self = {
+
+    globalListHandler : undefined,
+    globalCreateHandler : undefined,
+    globalReadHandler : undefined,
+    globalUpdateHandler : undefined,
+    globalDeleteHandler : undefined,
+    globalCollisionHandler : undefined,
+    globalCollisionLister : undefined,
+    globalCollisionRemover : undefined,
+    globalRequestInterceptor : undefined,
 
     defaults : {
       "syncFrequency": 10
@@ -654,6 +706,113 @@ var DataSetModel = (function() {
     datasets : {},
     deletedDatasets : {},
 
+    doListHandler : function(dataset_id, query_params, cb, meta_data) {
+      self.getDataset(dataset_id, function(err, dataset) {
+        if(err) return cb(err);
+        if(dataset.listHandler) {
+          dataset.listHandler(dataset_id, query_params, cb, meta_data);
+        }
+        else {
+          self.globalListHandler(dataset_id, query_params, cb, meta_data);
+        }
+      });
+    },
+
+    doCreateHandler : function(dataset_id, data, cb, meta_data) {
+      self.getDataset(dataset_id, function(err, dataset) {
+        if(err) return cb(err);
+        if(dataset.createHandler) {
+          dataset.createHandler(dataset_id, data, cb, meta_data);
+        }
+        else {
+          self.globalCreateHandler(dataset_id, data, cb, meta_data);
+        }
+      });
+    },
+
+    doReadHandler : function(dataset_id, uid, cb, meta_data) {
+      self.getDataset(dataset_id, function(err, dataset) {
+        if(err) return cb(err);
+        if(dataset.readHandler) {
+          dataset.readHandler(dataset_id, uid, cb, meta_data);
+        }
+        else {
+          self.globalReadHandler(dataset_id, uid, cb, meta_data);
+        }
+      });
+    },
+
+    doUpdateHandler : function(dataset_id, uid, data, cb, meta_data) {
+      self.getDataset(dataset_id, function(err, dataset) {
+        if(err) return cb(err);
+        if(dataset.updateHandler) {
+          dataset.updateHandler(dataset_id, uid, data, cb, meta_data);
+        }
+        else {
+          self.globalUpdateHandler(dataset_id, uid, data, cb, meta_data);
+        }
+      });
+    },
+
+    doDeleteHandler : function(dataset_id, uid, cb, meta_data) {
+      self.getDataset(dataset_id, function(err, dataset) {
+        if(err) return cb(err);
+        if(dataset.deleteHandler) {
+          dataset.deleteHandler(dataset_id, uid, cb, meta_data);
+        }
+        else {
+          self.globalDeleteHandler(dataset_id, uid, cb, meta_data);
+        }
+      });
+    },
+
+    doCollisionHandler : function(dataset_id, hash, timestamp, uid, pre, post, meta_data) {
+      self.getDataset(dataset_id, function(err, dataset) {
+        if(err) return cb(err);
+        if(dataset.collisionHandler) {
+          dataset.collisionHandler(dataset_id, hash, timestamp, uid, pre, post, meta_data);
+        }
+        else {
+          self.globalCollisionHandler(dataset_id, hash, timestamp, uid, pre, post, meta_data);
+        }
+      });
+    },
+
+    doCollisionLister : function(dataset_id, cb, meta_data) {
+      self.getDataset(dataset_id, function(err, dataset) {
+        if(err) return cb(err);
+        if(dataset.listCollisions) {
+          dataset.listCollisions(dataset_id, cb, meta_data);
+        }
+        else {
+          self.globalCollisionLister(dataset_id, cb, meta_data);
+        }
+      });
+    },
+
+    doCollisionRemover : function(dataset_id, hash, cb, meta_data) {
+      self.getDataset(dataset_id, function(err, dataset) {
+        if(err) return cb(err);
+        if(dataset.removeCollision) {
+          dataset.removeCollision(dataset_id, hash, cb, meta_data);
+        }
+        else {
+          self.globalCollisionRemover(dataset_id, hash, cb, meta_data);
+        }
+      });
+    },
+
+    doRequestInterceptor : function(dataset_id, params, cb) {
+      self.getDataset(dataset_id, function(err, dataset) {
+        if(err) return cb(err);
+        if(dataset.requestInterceptor) {
+          dataset.requestInterceptor(dataset_id, params, cb);
+        }
+        else {
+          self.globalRequestInterceptor(dataset_id, params, cb);
+        }
+      });
+    },
 
     getDataset : function(dataset_id, cb) {
 
@@ -828,11 +987,7 @@ var DataSetModel = (function() {
       datasetClient.syncRunning = true;
       datasetClient.syncLoopStart = new Date().getTime();
 
-      if( ! dataset.listHandler ) {
-        return cb("no_listHandler", null);
-      }
-
-      dataset.listHandler(dataset.id, datasetClient.query_params, function(err, records) {
+      self.doListHandler(dataset.id, datasetClient.query_params, function(err, records) {
         if( err ) return cb(err);
 
 
@@ -913,6 +1068,53 @@ var DataSetModel = (function() {
       }
     },
 
+    setGlobalListHandler : function(globalListHandler) {
+      self.globalListHandler = globalListHandler;
+    },
+
+    setGlobalCreateHandler : function(globalCreateHandler) {
+      self.globalCreateHandler = globalCreateHandler;
+    },
+
+    setGlobalReadHandler : function(globalReadHandler) {
+      self.globalReadHandler = globalReadHandler;
+    },
+
+    setGlobalUpdateHandler : function(globalUpdateHandler) {
+      self.globalUpdateHandler = globalUpdateHandler;
+    },
+
+    setGlobalDeleteHandler : function(globalDeleteHandler) {
+      self.globalDeleteHandler = globalDeleteHandler;
+    },
+
+    setGlobalCollisionHandler : function(globalCollisionHandler) {
+      self.globalCollisionHandler = globalCollisionHandler;
+    },
+
+    setGlobalCollisionLister : function(globalCollisionLister) {
+      self.globalCollisionLister = globalCollisionLister;
+    },
+
+    setGlobalCollisionRemover : function(globalCollisionRemover) {
+      self.globalCollisionRemover = globalCollisionRemover;
+    },
+
+    setGlobalRequestInterceptor : function(globalRequestInterceptor) {
+      self.globalRequestInterceptor = globalRequestInterceptor;
+    },
+
+    setDefaultHandlers : function() {
+      self.globalListHandler = defaultDataHandler.doList;
+      self.globalCreateHandler = defaultDataHandler.doCreate;
+      self.globalReadHandler = defaultDataHandler.doRead;
+      self.globalUpdateHandler = defaultDataHandler.doUpdate;
+      self.globalDeleteHandler = defaultDataHandler.doDelete;
+      self.globalCollisionHandler = defaultDataHandler.handleCollision;
+      self.globalCollisionLister = defaultDataHandler.listCollisions;
+      self.globalCollisionRemover = defaultDataHandler.removeCollision;
+    },
+
     datasetMonitor : function() {
       self.doSyncLoop();
 
@@ -926,6 +1128,8 @@ var DataSetModel = (function() {
   var init = function() {
     doLog('', 'info', 'DataSetModel Init');
 
+    self.setDefaultHandlers();
+
     self.datasetMonitor();
 
   };
@@ -933,6 +1137,24 @@ var DataSetModel = (function() {
   init();
 
   return {
+    setGlobalListHandler : self.setGlobalListHandler,
+    setGlobalCreateHandler : self.setGlobalCreateHandler,
+    setGlobalReadHandler : self.setGlobalReadHandler,
+    setGlobalUpdateHandler : self.setGlobalUpdateHandler,
+    setGlobalDeleteHandler : self.setGlobalDeleteHandler,
+    setGlobalCollisionHandler : self.setGlobalCollisionHandler,
+    setGlobalCollisionLister : self.setGlobalCollisionLister,
+    setGlobalCollisionRemover : self.setGlobalCollisionRemover,
+    setGlobalRequestInterceptor : self.setGlobalRequestInterceptor,
+    doListHandler : self.doListHandler,
+    doCreateHandler : self.doCreateHandler,
+    doReadHandler : self.doReadHandler,
+    doUpdateHandler : self.doUpdateHandler,
+    doDeleteHandler : self.doDeleteHandler,
+    doCollisionHandler : self.doCollisionHandler,
+    doCollisionLister : self.doCollisionLister,
+    doCollisionRemover : self.doCollisionRemover,
+    doRequestInterceptor : self.doRequestInterceptor,
     stopDatasetSync : self.stopDatasetSync,
     stopAllDatasetSync : self.stopAllDatasetSync,
     getOrCreateDatasetClient: self.getOrCreateDatasetClient,
@@ -947,3 +1169,227 @@ var DataSetModel = (function() {
     getClientHash : self.getClientHash
   }
 })();
+
+
+/* ======================================================= */
+/* ============= Default DataSet Handlers ================ */
+/* ======================================================= */
+var defaultDataHandler = {
+
+  doList : function(dataset_id, params, cb, meta_data) {
+    doLog(dataset_id, 'info', 'doList : ' + dataset_id + ' :: ' + util.inspect(params) + ' :: meta=' + util.inspect(meta_data));
+
+    $fh.db({
+      "act": "list",
+      "type": dataset_id
+    }, function(err, res) {
+      if (err) return cb(err);
+
+      var resJson = {};
+      for (var di = 0, dl = res.list.length; di < dl; di += 1) {
+        resJson[res.list[di].guid] = res.list[di].fields;
+      }
+      return cb(null, resJson);
+    });
+  },
+
+  doCreate : function(dataset_id, data, cb, meta_data) {
+    doLog(dataset_id, 'info', 'doCreate : ' + dataset_id + ' :: ' + util.inspect(data) + ' :: meta=' + util.inspect(meta_data));
+
+    $fh.db({
+      "act": "create",
+      "type": dataset_id,
+      "fields": data
+    }, function(err, res) {
+      if (err) return cb(err);
+      var data = {'uid': res.guid, 'data': res.fields};
+      return cb(null, data);
+    });
+  },
+
+  doRead : function(dataset_id, uid, cb, meta_data) {
+    doLog(dataset_id, 'info', 'doRead : ' + dataset_id + ' :: ' + uid + ' :: meta=' + util.inspect(meta_data));
+
+    $fh.db({
+      "act": "read",
+      "type": dataset_id,
+      "guid": uid
+    }, function(err, res) {
+      if (err) return cb(err);
+      return cb (null, res.fields);
+    });
+  },
+
+  doUpdate : function(dataset_id, uid, data, cb, meta_data) {
+    doLog(dataset_id, 'info', 'doUpdate : ' + dataset_id + ' :: ' + uid + ' :: ' + util.inspect(data) + ' :: meta=' + util.inspect(meta_data));
+
+    $fh.db({
+      "act": "update",
+      "type": dataset_id,
+      "guid": uid,
+      "fields": data
+    }, function(err, res) {
+      if (err) return cb(err);
+      return cb(null, res.fields);
+    });
+  },
+
+  doDelete : function(dataset_id, uid, cb, meta_data) {
+    doLog(dataset_id, 'info', 'doDelete : ' + dataset_id + ' :: ' + uid + ' :: meta=' + util.inspect(meta_data));
+
+    $fh.db({
+      "act": "delete",
+      "type": dataset_id,
+      "guid": uid
+    }, function(err, res) {
+      if (err) return cb(err);
+      return cb(null, res.fields);
+    });
+  },
+
+  doCollision : function(dataset_id, hash, timestamp, uid, pre, post, meta_data) {
+    doLog(dataset_id, 'info', 'doCollision : ' + dataset_id + ' :: hash=' + hash + ' :: timestamp=' + timestamp + ' :: uid=' + uid + ' :: pre=' + util.inspect(pre) + ' :: post=' + util.inspect(post) + ' :: meta=' + util.inspect(meta_data));
+
+    var fields = {
+      "hash" : hash,
+      "timestamp" : timestamp,
+      "uid" : uid,
+      "pre" : pre,
+      "post" : post
+    };
+
+    $fh.db({
+      "act": "create",
+      "type": dataset_id + '_collision',
+      "fields": fields
+    },function (err){
+      if(err) console.log(err);
+    });
+  },
+
+  listCollisions : function(dataset_id, cb, meta_data) {
+    doLog(dataset_id, 'info', 'listCollisions : ' + dataset_id + ' :: meta=' + util.inspect(meta_data));
+    $fh.db({
+      "act": "list",
+      "type": dataset_id + '_collision'
+    }, function(err, res) {
+      if(err) return cb(err);
+
+      var resJson = {};
+
+      for (var di = 0; di < res.list.length; di++) {
+        resJson[res.list[di].fields.hash] = res.list[di].fields;
+      }
+
+      cb(null, resJson);
+    });
+  },
+
+  removeCollision : function(dataset_id, hash, cb, meta_data) {
+    doLog(dataset_id, 'info', 'removeCollision : ' + dataset_id + ' :: hash=' + hash + ' :: meta=' + util.inspect(meta_data));
+    $fh.db({
+      "act": "list",
+      "type": dataset_id + '_collision',
+      "eq": {
+        "hash": hash
+      }
+    }, function(err, data) {
+      if(err) cb(err);
+
+      if( data.list && data.list.length == 1 ) {
+        var guid = data.list[0].guid;
+        $fh.db({
+          "act": "delete",
+          "type": dataset_id + '_collision',
+          "guid": guid
+        }, cb);
+      } else {
+        return cb(null, {"status":"ok", "message":"No collision found for hash " + hash});
+      }
+    });
+  }
+};
+
+
+
+/* ======================================================= */
+/* ================= Utility Functions =================== */
+/* ======================================================= */
+function generateHash(plainText) {
+  var hash;
+  if( plainText ) {
+    if ('string' !== typeof plainText) {
+      plainText = sortedStringify(plainText);
+    }
+    var shasum = crypto.createHash('sha1');
+    shasum.update(plainText);
+    hash = shasum.digest('hex');
+  }
+  return hash;
+}
+
+function sortObject(object) {
+  if (typeof object !== "object" || object === null) {
+    return object;
+  }
+
+  var result = [];
+
+  Object.keys(object).sort().forEach(function(key) {
+    result.push({
+      key: key,
+      value: sortObject(object[key])
+    });
+  });
+
+  return result;
+}
+
+
+function sortedStringify(obj) {
+
+  var str = '';
+
+  try {
+    var soretdObject = sortObject(obj);
+    if(obj) {
+      str = JSON.stringify(sortObject(obj));
+    }
+  } catch (e) {
+    doLog(SYNC_LOGGER, 'error', 'Error stringifying sorted object:' + e);
+    throw e;
+  }
+
+  return str;
+}
+
+function setLogger(dataset_id, options) {
+  var level = options.logLevel;
+  var logger = new (winston.Logger)({
+    transports: [
+      new (winston.transports.Console)({ level: level, debugStdout: true })
+    ]
+  });
+
+  loggers[dataset_id] = logger;
+}
+
+function doLog(dataset_id, level, msg, params) {
+
+  var logger = loggers[dataset_id] || loggers[SYNC_LOGGER];
+  if( logger ) {
+    var logMsg = moment().format('YYYY-MM-DD HH:mm:ss') + ' [' + dataset_id + '] ';
+    logMsg += '(' + getCuid(params)  + ')';
+    logMsg = logMsg + ': ' +msg;
+
+    logger.log(level, logMsg);
+  }
+}
+
+function getCuid(params) {
+  var cuid = '';
+  if( params && params.__fh && params.__fh.cuid ) {
+    cuid = params.__fh.cuid;
+  }
+  return cuid;
+}
