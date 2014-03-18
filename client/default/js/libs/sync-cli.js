@@ -579,8 +579,8 @@ $fh.sync = (function() {
                   self.syncRecords(dataset_id);
                 } else {
                   self.consoleLog("Local dataset up to date");
+                  self.syncComplete(dataset_id,  "online", self.notifications.SYNC_COMPLETE);
                 }
-                self.syncComplete(dataset_id,  "online", self.notifications.SYNC_COMPLETE);
               }, function(msg, err) {
                 // The AJAX call failed to complete succesfully, so the state of the current pending updates is unknown
                 // Mark them as "crashed". The next time a syncLoop completets successfully, we will review the crashed
