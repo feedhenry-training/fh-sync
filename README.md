@@ -1,3 +1,9 @@
+NO LONGER MAINTAINED
+=======
+
+See https://github.com/feedhenry-templates/sync-tutorial-app for a more up to date version of this app
+----
+
 FeedHenry Data Sync Framework - Sample App
 =======
 
